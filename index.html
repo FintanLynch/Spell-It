@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <!--
+    viewport meta: tells the browser to use the device's real width and
+    not to auto-zoom. Essential for tablets and phones.
+  -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#5b6cf9" />
+  <title>Spell It! 🌟</title>
+
+  <style>
+    /* ============================================================
+       1. RESET + CSS CUSTOM PROPERTIES
+       box-sizing: border-box means padding/border are included in
+       an element's width — simpler than the default "content-box".
+       CSS custom properties (--name) work like variables: define
+       once, use everywhere with var(--name).
+       ============================================================ */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --tile-size:  72px;   /* width/height of each letter tile & slot */
+      --tile-font:  38px;   /* font size inside tiles */
+      --gap:        12px;   /* space between tiles/slots */
+      --radius:     14px;   /* corner rounding */
+    }
+
+    /* ============================================================
+       2. BODY & APP CONTAINER
+       The body fills the viewport with a purple→violet gradient.
+       #app is a centred column that stretches to at least full
+       height; using align-items: flex-start on the body lets #app
+       grow taller than the viewport (allowing normal scroll) rather
+       than being clipped.
+       ============================================================ */
+    body {
+      font-family: 'Trebuchet MS', 'Arial Rounded MT Bold', Arial, sans-serif;
+      background: linear-gradient(155deg, #5b6cf9 0%, #a855f7 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;  /* don't clip taller content */
+    }
+
+    #app {
+      width: 100%;
+      max-width: 860px;
+      padding: 20px 16px;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;      /* vertically centre screens within #app */
+      justify-content: center;
+    }
+
+    /* ============================================================
+       3. SCREEN MANAGEMENT
+       Both screens live in the DOM; we toggle the .hidden class
+       to show/hide them. `!important` ensures .hidden always wins
+       even if another rule adds display: flex/block.
+       ============================================================ */
+    .screen {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .hidden { display: none !important; }
+
+    /* ============================================================
+       4. START SCREEN
+       ============================================================ */
+    .game-title {
+      font-size: clamp(52px, 13vw, 96px); /* fluid: never below 52px or above 96px */
+      color: white;
+      text-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
+      text-align: center;
+      line-height: 1.1;
+    }
+
+    .subtitle {
+      font-size: clamp(20px, 5vw, 26px);
+      color: rgba(255, 255, 255, 0.88);
+      text-align: center;
+      max-width: 480px;
+    }
+
+    /* Level-select button row wraps on small screens */
+    .level-select {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      justify-content: center;
+      width: 100%;
+    }
+
+    /* Base level button style — each colour variant below overrides background/color */
+    .level-btn {
+      flex: 1 1 160px;      /* grow/shrink, base width 160px */
+      max-width: 210px;
+      padding: 18px 16px;
+      border: none;
+      border-radius: 20px;
+      font-size: 22px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      line-height: 1.4;
+    }
+
+    .level-btn:hover,
+    .level-btn:focus {
+      transform: translateY(-4px) scale(1.05);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+      outline: none;
+    }
+
+    .level-btn:active { transform: scale(0.97); }
+
+    .easy-btn   { background: #4ade80; color: #14532d; } /* green  */
+    .medium-btn { background: #fbbf24; color: #78350f; } /* amber  */
+    .hard-btn   { background: #f87171; color: #7f1d1d; } /* red    */
+
+    /* Small descriptor below each button label */
+    .level-desc {
+      display: block;
+      font-size: 13px;
+      font-weight: normal;
+      opacity: 0.72;
+      margin-top: 4px;
+    }
+
+    /* ============================================================
+       5. GAME SCREEN — HEADER
+       Three flex items: back button (left), score (centre), word
+       counter (right). space-between pushes them apart.
+       ============================================================ */
+    .game-header {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .back-btn {
+      background: rgba(255, 255, 255, 0.22);
+      border: 2px solid rgba(255, 255, 255, 0.45);
+      border-radius: 40px;
+      color: white;
+      font-size: 17px;
+      padding: 7px 16px;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .back-btn:hover { background: rgba(255, 255, 255, 0.38); }
+
+    .score-display {
+      font-size: clamp(20px, 5vw, 28px);
+      font-weight: bold;
+      color: #fde047;                           /* golden yellow */
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+      text-align: center;
+      flex: 1;
+    }
+
+    .word-progress {
+      font-size: clamp(14px, 3.5vw, 19px);
+      color: rgba(255, 255, 255, 0.8);
+      text-align: right;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* ============================================================
+       6. GAME SCREEN — EMOJI & INSTRUCTION
+       ============================================================ */
+
+    /* The "picture" clue — an emoji scaled up large */
+    .emoji-display {
+      font-size: clamp(80px, 22vw, 150px);
+      line-height: 1;
+      filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.2));
+      user-select: none;  /* prevent accidental text selection on long-press */
+    }
+
+    .word-label {
+      font-size: clamp(20px, 4.5vw, 26px);
+      color: rgba(255, 255, 255, 0.88);
+      font-style: italic;
+    }
+
+    /* ============================================================
+       7. LETTER SLOTS
+       Empty boxes waiting for tiles. Dashed border shows "gap"
+       for a letter; switches to solid/filled after correct drop.
+       ============================================================ */
+    .slots-area {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: var(--gap);
+    }
+
+    .slot {
+      width:  var(--tile-size);
+      height: var(--tile-size);
+      border: 3px dashed rgba(255, 255, 255, 0.5);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.10);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--tile-font);
+      font-weight: bold;
+      color: white;
+      transition: background 0.15s, transform 0.12s;
+    }
+
+    /* Used in Step 2: glow when a dragged tile hovers over this slot */
+    .slot.drag-over {
+      background: rgba(255, 255, 255, 0.30);
+      transform: scale(1.09);
+      border-color: rgba(255, 255, 255, 0.85);
+    }
+
+    /* After the correct letter is placed */
+    .slot.filled {
+      border-style: solid;
+      border-color: rgba(255, 255, 255, 0.75);
+      background: rgba(255, 255, 255, 0.22);
+    }
+
+    /* ============================================================
+       8. LETTER TILES
+       Each tile is a coloured card with a single capital letter.
+       Colour is set via a CSS custom property --tile-bg, which is
+       overridden per-tile by a [data-color-index] attribute rule.
+       ============================================================ */
+    .tiles-area {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: var(--gap);
+      min-height: var(--tile-size);   /* keeps area from collapsing when all tiles are lifted */
+    }
+
+    /*
+      Six colour swatches. The [attr="val"] selector has specificity
+      (0,2,0) — higher than .tile's (0,1,0) — so it wins and its
+      --tile-bg value is what `background: var(--tile-bg)` below sees.
+    */
+    .tile[data-color-index="0"] { --tile-bg: #ff6b6b; } /* coral   */
+    .tile[data-color-index="1"] { --tile-bg: #ffd93d; } /* yellow  */
+    .tile[data-color-index="2"] { --tile-bg: #6bcb77; } /* green   */
+    .tile[data-color-index="3"] { --tile-bg: #4d96ff; } /* blue    */
+    .tile[data-color-index="4"] { --tile-bg: #f98d4b; } /* orange  */
+    .tile[data-color-index="5"] { --tile-bg: #c084fc; } /* violet  */
+
+    .tile {
+      --tile-bg: #ff6b6b;              /* fallback colour if data-color-index is absent */
+      width:  var(--tile-size);
+      height: var(--tile-size);
+      border-radius: var(--radius);
+      background: var(--tile-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--tile-font);
+      font-weight: bold;
+      color: rgba(0, 0, 0, 0.72);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+      user-select: none;
+      cursor: grab;
+      /*
+        touch-action: none tells the browser NOT to handle scroll/pinch
+        on this element, so our Pointer Event handlers (Step 2) get
+        every touch event uninterrupted.
+      */
+      touch-action: none;
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+
+    .tile:hover {
+      transform: scale(1.13) translateY(-4px);
+      box-shadow: 0 9px 22px rgba(0, 0, 0, 0.3);
+    }
+
+    /* ---- Drag states (CSS ready; JS wires them up in Step 2) ---- */
+
+    /* The original tile becomes a ghost while it's being dragged */
+    .tile.dragging {
+      opacity: 0.28;
+      cursor: grabbing;
+    }
+
+    /* A cloned copy of the tile that travels with the pointer */
+    .tile.drag-ghost {
+      position: fixed;
+      z-index: 999;
+      pointer-events: none;   /* ghost doesn't block pointer events on what's below */
+      cursor: grabbing;
+      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35);
+      transform: scale(1.15) rotate(4deg);
+      transition: none;       /* ghost must follow pointer with zero lag */
+    }
+
+    /* ============================================================
+       9. ANIMATIONS
+       Defined here; triggered by adding/removing CSS classes in JS.
+       ============================================================ */
+
+    /* Shake: wrong letter dropped */
+    @keyframes shake {
+      0%   { transform: translateX(0);    }
+      18%  { transform: translateX(-10px); }
+      36%  { transform: translateX( 10px); }
+      54%  { transform: translateX( -7px); }
+      72%  { transform: translateX(  7px); }
+      90%  { transform: translateX( -3px); }
+      100% { transform: translateX(0);    }
+    }
+
+    .tile.shake { animation: shake 0.45s ease; }
+
+    /* Snap-in: correct letter lands in its slot */
+    @keyframes snap-in {
+      0%   { transform: scale(1.4);  }
+      55%  { transform: scale(0.88); }
+      100% { transform: scale(1);    }
+    }
+
+    .slot.snap { animation: snap-in 0.28s ease forwards; }
+
+    /* Tile entrance: each tile rises up when a new word loads */
+    @keyframes tile-enter {
+      from { transform: translateY(36px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+
+    /*
+      `backwards` fill-mode: the `from` keyframe (invisible, offset)
+      is applied during the animation-delay period, so tiles that
+      start late are hidden rather than briefly visible before their
+      animation begins.
+    */
+    .tile.enter { animation: tile-enter 0.32s ease backwards; }
+
+    /* ============================================================
+       10. RESPONSIVE BREAKPOINTS
+       Override the CSS variables at different viewport widths.
+       Everything that uses var(--tile-size) etc. automatically
+       scales — we don't need to rewrite any layout rules.
+       ============================================================ */
+
+    /* Small phones */
+    @media (max-width: 480px) {
+      :root {
+        --tile-size: 56px;
+        --tile-font: 28px;
+        --gap: 8px;
+      }
+    }
+
+    /* Large tablets / desktop */
+    @media (min-width: 640px) {
+      :root {
+        --tile-size: 80px;
+        --tile-font: 44px;
+        --gap: 14px;
+      }
+    }
+
+    /* ============================================================
+       WORD-COMPLETE OVERLAY
+       `position: fixed; inset: 0` stretches the overlay to cover
+       the entire viewport regardless of scroll position.
+       ============================================================ */
+    .word-overlay {
+      position: fixed;
+      inset: 0;           /* shorthand for top:0; right:0; bottom:0; left:0 */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;       /* above everything else */
+      background: rgba(0, 0, 0, 0.38);
+      animation: overlay-bg-in 0.25s ease;
+    }
+
+    @keyframes overlay-bg-in {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    /* The white card that pops in the centre */
+    .word-overlay-card {
+      background: white;
+      border-radius: 28px;
+      padding: 36px 52px;
+      text-align: center;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+      /* cubic-bezier with overshoot gives a satisfying "boing" pop */
+      animation: overlay-card-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes overlay-card-in {
+      from { transform: scale(0.55); opacity: 0; }
+      to   { transform: scale(1);    opacity: 1; }
+    }
+
+    .overlay-stars {
+      font-size: clamp(40px, 12vw, 72px);
+      letter-spacing: 6px;
+      line-height: 1;
+      margin-bottom: 12px;
+    }
+
+    .overlay-message {
+      font-size: clamp(22px, 5.5vw, 34px);
+      font-weight: bold;
+      color: #5b6cf9;
+    }
+
+    /* ============================================================
+       END SCREEN
+       ============================================================ */
+    .end-title {
+      font-size: clamp(36px, 9vw, 70px);
+      color: white;
+      text-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+
+    .end-card {
+      background: rgba(255, 255, 255, 0.18);
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      border-radius: 24px;
+      padding: 28px 48px;
+      text-align: center;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .end-label {
+      font-size: clamp(14px, 3.5vw, 20px);
+      color: rgba(255, 255, 255, 0.78);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 10px;
+    }
+
+    .end-star-count {
+      font-size: clamp(44px, 13vw, 86px);
+      font-weight: bold;
+      color: #fde047;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+      line-height: 1;
+    }
+
+    .end-max-text {
+      font-size: clamp(16px, 4vw, 22px);
+      color: rgba(255, 255, 255, 0.72);
+      margin-top: 8px;
+    }
+
+    .end-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      justify-content: center;
+    }
+
+    /* ============================================================
+       CONFETTI
+       Each piece is a small fixed-position div created by JS on
+       word completion and removed automatically after its animation.
+       `animation-duration` and `animation-delay` are set per-piece
+       via inline styles (inline > class specificity), which lets the
+       CSS here define just the name, easing, and fill-mode.
+       ============================================================ */
+    .confetti-piece {
+      position: fixed;
+      top: -16px;
+      pointer-events: none;
+      z-index: 150;           /* above game content, below overlay (200) */
+      animation: confetti-fall 2s linear forwards;
+    }
+
+    @keyframes confetti-fall {
+      0%  { transform: translateY(0)     translateX(0)                rotate(0deg);   opacity: 1; }
+      50% { transform: translateY(50vh)  translateX(var(--drift,30px)) rotate(360deg); }
+      90% { opacity: 1; }
+      100%{ transform: translateY(110vh) translateX(0)                rotate(720deg); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+
+    <!-- ==========================================================
+         START SCREEN
+         ========================================================== -->
+    <div id="start-screen" class="screen">
+
+      <h1 class="game-title">Spell It! 🌟</h1>
+      <p class="subtitle">Drag the letters to spell the word!</p>
+
+      <div class="level-select">
+        <!--
+          data-level is a custom HTML attribute. In JS we read it as
+          element.dataset.level — the browser automatically converts
+          `data-xyz` attributes to camelCase dataset properties.
+        -->
+        <button class="level-btn easy-btn" data-level="easy">
+          🌱 Easy
+          <span class="level-desc">3-letter words</span>
+        </button>
+        <button class="level-btn medium-btn" data-level="medium">
+          🌿 Medium
+          <span class="level-desc">4-letter words</span>
+        </button>
+        <button class="level-btn hard-btn" data-level="hard">
+          🌳 Hard
+          <span class="level-desc">5–6 letter words</span>
+        </button>
+      </div>
+
+    </div><!-- end #start-screen -->
+
+
+    <!-- ==========================================================
+         GAME SCREEN
+         ========================================================== -->
+    <div id="game-screen" class="screen hidden">
+
+      <!-- Header: back button | score | word counter -->
+      <div class="game-header">
+        <button id="back-btn" class="back-btn">← Menu</button>
+        <div id="score-display" class="score-display">⭐ 0</div>
+        <div id="word-progress" class="word-progress">Word 1 of 7</div>
+      </div>
+
+      <!-- Emoji "picture clue" — JS sets this for each word -->
+      <div id="emoji-display" class="emoji-display" aria-label="Picture clue"></div>
+
+      <p class="word-label">Spell this word!</p>
+
+      <!-- Empty letter slots — built by JS per word -->
+      <div id="slots-area" class="slots-area" role="list" aria-label="Letter slots"></div>
+
+      <!-- Draggable letter tiles — built by JS per word -->
+      <div id="tiles-area" class="tiles-area" role="list" aria-label="Letter tiles"></div>
+
+    </div><!-- end #game-screen -->
+
+    <!-- ==========================================================
+         WORD-COMPLETE OVERLAY
+         Shown briefly after each word is spelled correctly.
+         `position: fixed` in CSS makes it float above everything.
+         ========================================================== -->
+    <div id="word-overlay" class="word-overlay hidden" aria-live="polite">
+      <div class="word-overlay-card">
+        <div id="overlay-stars"   class="overlay-stars"></div>
+        <div id="overlay-message" class="overlay-message"></div>
+      </div>
+    </div>
+
+    <!-- ==========================================================
+         END SCREEN
+         Shown after all words in the session have been played.
+         ========================================================== -->
+    <div id="end-screen" class="screen hidden">
+      <div class="end-title">🎉 All Done! 🎉</div>
+
+      <div class="end-card">
+        <div class="end-label">Your Stars</div>
+        <div id="end-star-count" class="end-star-count">⭐ 0</div>
+        <div id="end-max-text"   class="end-max-text">out of 21</div>
+      </div>
+
+      <div class="end-buttons">
+        <button id="play-again-btn"   class="level-btn easy-btn">
+          🔄 Play Again
+          <span class="level-desc">same level</span>
+        </button>
+        <button id="change-level-btn" class="level-btn medium-btn">
+          🏠 Menu
+          <span class="level-desc">pick a level</span>
+        </button>
+      </div>
+    </div><!-- end #end-screen -->
+
+  </div><!-- end #app -->
+
+  <script>
+    /* ==========================================================
+       WORD LIST
+       ──────────────────────────────────────────────────────────
+       This is the only place you need to edit to add new words.
+       Format: { word: "cat", emoji: "🐱" }
+       ========================================================== */
+    const WORDS = {
+      easy: [
+        { word: "cat",  emoji: "🐱" },
+        { word: "dog",  emoji: "🐶" },
+        { word: "sun",  emoji: "☀️" },
+        { word: "hat",  emoji: "🎩" },
+        { word: "bug",  emoji: "🐛" },
+        { word: "cow",  emoji: "🐄" },
+        { word: "hen",  emoji: "🐔" },
+      ],
+      medium: [
+        { word: "fish", emoji: "🐟" },
+        { word: "tree", emoji: "🌳" },
+        { word: "bird", emoji: "🐦" },
+        { word: "frog", emoji: "🐸" },
+        { word: "cake", emoji: "🎂" },
+        { word: "bear", emoji: "🐻" },
+        { word: "duck", emoji: "🦆" },
+      ],
+      hard: [
+        { word: "apple",  emoji: "🍎" },
+        { word: "tiger",  emoji: "🐯" },
+        { word: "train",  emoji: "🚂" },
+        { word: "cloud",  emoji: "☁️" },
+        { word: "snake",  emoji: "🐍" },
+        { word: "flower", emoji: "🌸" },
+        { word: "rabbit", emoji: "🐰" },
+      ],
+    };
+
+    /* ==========================================================
+       STATE
+       ──────────────────────────────────────────────────────────
+       One object holds everything about the current session.
+       `const` in JS means the variable name can't be reassigned,
+       but the object's *contents* can change — just like a Python
+       dict assigned to a variable.
+       ========================================================== */
+    const state = {
+      level:       null,  // "easy" | "medium" | "hard"
+      wordList:    [],    // shuffled copy of the chosen level's array
+      wordIndex:   0,     // which word we're on (0-based index)
+      currentWord: null,  // { word, emoji }
+      filledSlots: [],    // array of letter|null for each slot position
+      mistakes:    0,     // wrong drops on the current word
+      totalStars:  0,     // stars earned across all words this session
+    };
+
+    /* ==========================================================
+       DRAG STATE
+       ──────────────────────────────────────────────────────────
+       Holds everything about the in-progress drag gesture.
+       Kept in a single object so every handler can share it.
+       ========================================================== */
+    const drag = {
+      active:  false,  // is a drag currently happening?
+      tile:    null,   // the original tile element being dragged
+      ghost:   null,   // the floating clone that follows the pointer
+      offsetX: 0,      // pointer X distance from the tile's top-left corner
+      offsetY: 0,      // pointer Y distance from the tile's top-left corner
+    };
+
+    /* ==========================================================
+       DOM REFERENCES
+       ──────────────────────────────────────────────────────────
+       Grab elements once at startup. Prefix $ is a convention
+       (not special syntax) to flag "this holds a DOM element".
+       document.getElementById is like soup.find(id="…") in Python's
+       BeautifulSoup, but returns the live DOM element.
+       ========================================================== */
+    const $startScreen  = document.getElementById("start-screen");
+    const $gameScreen   = document.getElementById("game-screen");
+    const $emojiDisplay = document.getElementById("emoji-display");
+    const $slotsArea    = document.getElementById("slots-area");
+    const $tilesArea    = document.getElementById("tiles-area");
+    const $scoreDisplay = document.getElementById("score-display");
+    const $wordProgress = document.getElementById("word-progress");
+    const $backBtn      = document.getElementById("back-btn");
+    const $endScreen    = document.getElementById("end-screen");
+    const $wordOverlay  = document.getElementById("word-overlay");
+
+    /* ==========================================================
+       UTILITY: shuffle(array)
+       ──────────────────────────────────────────────────────────
+       Fisher-Yates shuffle — randomises an array in place.
+       Like Python's random.shuffle(), but returns the array too.
+       ========================================================== */
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        // Math.random() → float in [0, 1), like Python's random.random()
+        const j = Math.floor(Math.random() * (i + 1));
+        // Swap array[i] and array[j] via JS destructuring:
+        //   [a, b] = [b, a]  is the same idea as  a, b = b, a  in Python
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    /* ==========================================================
+       SCREEN MANAGEMENT
+       ========================================================== */
+
+    /*
+      Show one screen by name, hide the other.
+      classList.add / classList.remove work like Python's
+      set.add() and set.discard() on the element's class list.
+    */
+    function showScreen(name) {
+      // Hide every screen and the overlay, then reveal the requested one.
+      // Hiding the overlay here means navigating away mid-overlay cleans up safely.
+      $startScreen.classList.add("hidden");
+      $gameScreen.classList.add("hidden");
+      $endScreen.classList.add("hidden");
+      $wordOverlay.classList.add("hidden");
+      if (name === "start") $startScreen.classList.remove("hidden");
+      if (name === "game")  $gameScreen.classList.remove("hidden");
+      if (name === "end")   $endScreen.classList.remove("hidden");
+    }
+
+    /* ==========================================================
+       START SCREEN
+       ========================================================== */
+
+    function showStartScreen() {
+      showScreen("start");
+    }
+
+    /* ==========================================================
+       GAME SETUP
+       ========================================================== */
+
+    function startGame(level) {
+      state.level      = level;
+      state.totalStars = 0;
+      state.wordIndex  = 0;
+
+      /*
+        [...WORDS[level]] is the spread operator — creates a shallow
+        copy of the array before shuffling, so the original WORDS
+        object is never mutated. Same idea as Python's list(WORDS[level])
+        or WORDS[level][:].
+      */
+      state.wordList = shuffle([...WORDS[level]]);
+
+      showScreen("game");
+      loadWord();
+    }
+
+    function loadWord() {
+      if (state.wordIndex >= state.wordList.length) {
+        showEndScreen();
+        return;
+      }
+
+      state.currentWord = state.wordList[state.wordIndex];
+      state.mistakes    = 0;
+
+      /*
+        new Array(n).fill(null) creates [null, null, …, null] of
+        length n — like Python's [None] * n.
+      */
+      state.filledSlots = new Array(state.currentWord.word.length).fill(null);
+
+      renderGameScreen();
+    }
+
+    /* ==========================================================
+       RENDER GAME SCREEN
+       ──────────────────────────────────────────────────────────
+       Builds the emoji display, letter slots, and letter tiles
+       for the current word. Called every time a new word loads.
+       ========================================================== */
+
+    function renderGameScreen() {
+      /*
+        Destructuring: pulls named properties out of an object.
+          const { word, emoji } = obj
+        is equivalent to Python's:
+          word, emoji = obj["word"], obj["emoji"]
+      */
+      const { word, emoji } = state.currentWord;
+
+      // Update emoji
+      $emojiDisplay.textContent = emoji;
+      $emojiDisplay.setAttribute("aria-label", `Picture: ${word}`);
+
+      // Update "Word N of M" counter
+      $wordProgress.textContent =
+        `Word ${state.wordIndex + 1} of ${state.wordList.length}`;
+
+      // ── Build letter slots ──────────────────────────────────
+      $slotsArea.innerHTML = "";   // wipe old slots (innerHTML = "" clears children)
+
+      for (let i = 0; i < word.length; i++) {
+        const slot = document.createElement("div");
+        slot.className          = "slot";
+        slot.dataset.index      = i;        // position in the word (0-based)
+        slot.dataset.letter     = word[i];  // the correct letter for this position
+        slot.setAttribute("role", "listitem");
+        slot.setAttribute("aria-label", `Slot ${i + 1} of ${word.length}`);
+        $slotsArea.appendChild(slot);
+      }
+
+      // ── Build shuffled letter tiles ──────────────────────────
+      $tilesArea.innerHTML = "";
+
+      /*
+        word.split("") converts "cat" → ["c", "a", "t"]
+        Same as list("cat") in Python.
+      */
+      const letters = shuffle(word.split(""));
+
+      /*
+        forEach is a looping method on arrays; the callback receives
+        the element and its index. Like Python's:
+          for colorIndex, letter in enumerate(letters): …
+      */
+      letters.forEach((letter, colorIndex) => {
+        const tile = document.createElement("div");
+
+        // "enter" triggers the tile-enter CSS animation
+        tile.className          = "tile enter";
+        tile.textContent        = letter.toUpperCase();
+        tile.dataset.letter     = letter;
+        tile.dataset.colorIndex = colorIndex % 6;  // cycle through 6 colour swatches
+
+        /*
+          Stagger each tile's entrance so they rise in sequence.
+          Backtick strings are JS template literals — like Python f-strings.
+          `${expr}` inserts the value of expr into the string.
+          The inline animation-delay overrides the class's default 0 s delay.
+        */
+        tile.style.animationDelay = `${colorIndex * 65}ms`;
+
+        tile.setAttribute("role", "listitem");
+        tile.setAttribute("aria-label", `Letter tile: ${letter.toUpperCase()}`);
+        tile.addEventListener("pointerdown", onTilePointerDown);
+        $tilesArea.appendChild(tile);
+      });
+
+      updateScoreDisplay();
+    }
+
+    /* ==========================================================
+       SCORE DISPLAY
+       ========================================================== */
+
+    function updateScoreDisplay() {
+      $scoreDisplay.textContent = `⭐ ${state.totalStars}`;
+    }
+
+    /* ==========================================================
+       DRAG HELPERS
+       ========================================================== */
+
+    // Reposition the ghost so it visually follows the pointer.
+    // The ghost uses `position: fixed`, so left/top are viewport-relative —
+    // the same coordinate space as clientX/clientY. Simple subtraction aligns them.
+    function positionGhost(clientX, clientY) {
+      drag.ghost.style.left = (clientX - drag.offsetX) + "px";
+      drag.ghost.style.top  = (clientY - drag.offsetY) + "px";
+    }
+
+    // Add .drag-over highlight to whichever unfilled slot the ghost's centre is over.
+    function updateSlotHighlights() {
+      const g  = drag.ghost.getBoundingClientRect();
+      const cx = g.left + g.width  / 2;
+      const cy = g.top  + g.height / 2;
+
+      $slotsArea.querySelectorAll(".slot").forEach(slot => {
+        slot.classList.remove("drag-over");
+        if (slot.dataset.filled) return;    // skip slots that are already filled
+        const r = slot.getBoundingClientRect();
+        if (cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom) {
+          slot.classList.add("drag-over");
+        }
+      });
+    }
+
+    // Return the first unfilled slot whose bounding box contains the ghost's centre,
+    // or null if none.
+    // getBoundingClientRect() returns { left, top, right, bottom, width, height }
+    // in viewport-relative CSS pixels — the same space as clientX/clientY.
+    function findOverlappingSlot() {
+      const g  = drag.ghost.getBoundingClientRect();
+      const cx = g.left + g.width  / 2;
+      const cy = g.top  + g.height / 2;
+
+      for (const slot of $slotsArea.querySelectorAll(".slot")) {
+        if (slot.dataset.filled) continue;
+        const r = slot.getBoundingClientRect();
+        if (cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom) {
+          return slot;
+        }
+      }
+      return null;
+    }
+
+    /* ==========================================================
+       POINTER EVENT HANDLERS
+       ──────────────────────────────────────────────────────────
+       Three events drive the whole drag lifecycle:
+         pointerdown  — finger/cursor touches the tile
+         pointermove  — moves while held
+         pointerup    — finger/cursor lifts
+       Pointer Events unify mouse and touch in one code path — no
+       separate touchstart / touchmove block needed.
+       ========================================================== */
+
+    function onTilePointerDown(e) {
+      if (drag.active)                    return;  // already dragging something
+      if (e.currentTarget.dataset.placed) return;  // tile already snapped into a slot
+
+      const tile = e.currentTarget;   // the element the listener is attached to
+      const rect = tile.getBoundingClientRect();
+
+      drag.active  = true;
+      drag.tile    = tile;
+      // Record where inside the tile the pointer landed.
+      // Subtracting this offset when positioning the ghost makes it feel like
+      // you grabbed the tile at exactly that spot (not always the centre).
+      drag.offsetX = e.clientX - rect.left;
+      drag.offsetY = e.clientY - rect.top;
+
+      // ── Create the floating ghost ───────────────────────────
+      // cloneNode(true) deep-copies the element, including all data-* attributes
+      drag.ghost = tile.cloneNode(true);
+      drag.ghost.classList.add("drag-ghost");
+      drag.ghost.classList.remove("enter", "shake", "dragging");
+      drag.ghost.style.animationDelay = "0ms";  // suppress staggered entry re-run
+      document.body.appendChild(drag.ghost);    // append to <body> so `position: fixed` works
+      positionGhost(e.clientX, e.clientY);
+
+      // Make the original tile translucent while its ghost is in the air
+      tile.classList.add("dragging");
+
+      // setPointerCapture routes all future events for this pointer ID to `tile`,
+      // even when the pointer moves off it — prevents losing fast drags on touch screens.
+      tile.setPointerCapture(e.pointerId);
+
+      // Attach move + release listeners directly to the tile, not document.
+      // They're automatically scoped to this one gesture and we remove them on pointerup.
+      tile.addEventListener("pointermove",   onTilePointerMove);
+      tile.addEventListener("pointerup",     onTilePointerUp);
+      tile.addEventListener("pointercancel", onTilePointerUp);  // handles interruptions (phone call, etc.)
+
+      e.preventDefault();  // stop the browser starting a text selection or scroll gesture
+    }
+
+    function onTilePointerMove(e) {
+      positionGhost(e.clientX, e.clientY);
+      updateSlotHighlights();
+    }
+
+    function onTilePointerUp(e) {
+      // Remove the temporary per-gesture listeners before anything else
+      drag.tile.removeEventListener("pointermove",   onTilePointerMove);
+      drag.tile.removeEventListener("pointerup",     onTilePointerUp);
+      drag.tile.removeEventListener("pointercancel", onTilePointerUp);
+
+      const slot = findOverlappingSlot();  // ghost is still in the DOM here, so this works
+
+      if (slot) {
+        if (drag.tile.dataset.letter === slot.dataset.letter) {
+          correctDrop(drag.tile, slot);
+        } else {
+          wrongDrop(drag.tile);
+        }
+      }
+      // If slot === null the tile was dropped in empty space; endDrag restores it.
+
+      endDrag();
+    }
+
+    /* ==========================================================
+       DROP OUTCOMES
+       ========================================================== */
+
+    function correctDrop(tile, slot) {
+      playCorrect();
+      // Show the letter inside the slot
+      slot.textContent    = tile.dataset.letter.toUpperCase();
+      slot.dataset.filled = "true";
+      slot.classList.add("filled", "snap");
+
+      // { once: true } auto-removes the listener after it fires once —
+      // like wrapping a callback in a "run once" helper in Python.
+      slot.addEventListener("animationend", () => {
+        slot.classList.remove("snap");
+      }, { once: true });
+
+      // Hide the original tile — it now "lives" inside the slot visually
+      tile.style.visibility = "hidden";
+      tile.dataset.placed   = "true";
+
+      // Record which letter is in this position
+      state.filledSlots[parseInt(slot.dataset.index)] = tile.dataset.letter;
+
+      // Array.every() is like Python's all() —
+      // returns true only if every element passes the test function
+      if (state.filledSlots.every(letter => letter !== null)) {
+        wordComplete();
+      }
+    }
+
+    function wrongDrop(tile) {
+      state.mistakes++;
+      playWrong();
+      // Remove the dragging opacity NOW so the shake animation is visible on the tile
+      tile.classList.remove("dragging");
+      tile.classList.add("shake");
+      tile.addEventListener("animationend", () => {
+        tile.classList.remove("shake");
+      }, { once: true });
+    }
+
+    function endDrag() {
+      if (drag.ghost) {
+        drag.ghost.remove();  // remove the floating clone from the DOM
+        drag.ghost = null;
+      }
+      if (drag.tile) {
+        drag.tile.classList.remove("dragging");  // restore full opacity
+        drag.tile = null;
+      }
+      // Clear any lingering slot highlights
+      $slotsArea.querySelectorAll(".slot.drag-over").forEach(s => {
+        s.classList.remove("drag-over");
+      });
+      drag.active = false;
+    }
+
+    /* ==========================================================
+       SCORING
+       ========================================================== */
+
+    // Stars for one word: 3 for perfect, 2 for one mistake, 1 for two or more.
+    function starsForWord(mistakes) {
+      if (mistakes === 0) return 3;
+      if (mistakes === 1) return 2;
+      return 1;
+    }
+
+    /* ==========================================================
+       WORD COMPLETE
+       ──────────────────────────────────────────────────────────
+       Called when every slot in the current word is filled.
+       Awards stars, updates the running total, then shows the
+       overlay before moving to the next word.
+       Celebration animation is added in the next step.
+       ========================================================== */
+    function wordComplete() {
+      const earned = starsForWord(state.mistakes);
+      state.totalStars += earned;
+      updateScoreDisplay();
+      playWordComplete();                      // ascending arpeggio fanfare
+      speak(state.currentWord.word);           // pronounce the completed word
+      launchConfetti();                        // shower of coloured pieces
+      showWordOverlay(earned);
+    }
+
+    // Display the star-rating card, then after a short pause advance the game.
+    function showWordOverlay(stars) {
+      document.getElementById("overlay-stars").textContent = "⭐".repeat(stars);
+
+      // Ternary chaining: condition ? a : condition2 ? b : c
+      // Same idea as Python's  a if cond else b if cond2 else c
+      document.getElementById("overlay-message").textContent =
+          stars === 3 ? "Amazing! 🎉"
+        : stars === 2 ? "Well done! 👍"
+        :               "Keep it up! 💪";
+
+      $wordOverlay.classList.remove("hidden");
+
+      setTimeout(() => {
+        $wordOverlay.classList.add("hidden");
+        state.wordIndex++;
+        loadWord();
+      }, 1400);
+    }
+
+    /* ==========================================================
+       END SCREEN
+       ──────────────────────────────────────────────────────────
+       Called after all words in the word list are played.
+       ========================================================== */
+    function showEndScreen() {
+      const maxStars = state.wordList.length * 3;
+      document.getElementById("end-star-count").textContent = `⭐ ${state.totalStars}`;
+      document.getElementById("end-max-text").textContent   = `out of ${maxStars}`;
+      showScreen("end");
+    }
+
+    /* ==========================================================
+       AUDIO — Web Audio API
+       ──────────────────────────────────────────────────────────
+       The Web Audio API generates tones mathematically — no audio
+       files needed. An OscillatorNode produces a raw waveform at a
+       given frequency; a GainNode controls volume and shapes the
+       envelope; both connect to AudioContext.destination (speakers).
+
+       AudioContext must be created after a user gesture (browser
+       autoplay policy), so we create it lazily on first use.
+       ========================================================== */
+
+    let audioCtx = null;   // created once, reused for all sounds
+
+    function getAudioContext() {
+      if (!audioCtx) {
+        // webkitAudioContext is the older Safari prefix; || gives a fallback
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      // Resume if the context was suspended after the tab was backgrounded
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      return audioCtx;
+    }
+
+    // Build and immediately play one short tone.
+    // `type` is the waveform shape ("sine" = pure tone, "sawtooth" = buzzy).
+    function makeNote(ctx, type, freq, volume, startTime, duration) {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, startTime);
+      gain.gain.setValueAtTime(volume, startTime);
+      // Exponential ramp fades out smoothly and avoids an audible click at the end
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    }
+
+    // Two-note rising chime (C5 → E5) played on a correct letter drop
+    function playCorrect() {
+      try {
+        const ctx = getAudioContext();
+        makeNote(ctx, "sine", 523, 0.28, ctx.currentTime,        0.22); // C5
+        makeNote(ctx, "sine", 659, 0.28, ctx.currentTime + 0.10, 0.22); // E5
+      } catch (e) { /* audio not available — silently skip */ }
+    }
+
+    // Descending sawtooth "bzzzt" played on a wrong letter drop
+    function playWrong() {
+      try {
+        const ctx  = getAudioContext();
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "sawtooth";   // harsher waveform gives a "wrong" feel
+        osc.frequency.setValueAtTime(200, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.35);
+        gain.gain.setValueAtTime(0.2,   ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.35);
+      } catch (e) { /* audio not available */ }
+    }
+
+    // Ascending C-major arpeggio (C5 E5 G5 C6) played on word completion
+    function playWordComplete() {
+      try {
+        const ctx = getAudioContext();
+        // Each entry: [frequency Hz, delay in seconds from now]
+        [[523, 0.00], [659, 0.13], [784, 0.26], [1047, 0.39]].forEach(([freq, t]) => {
+          makeNote(ctx, "sine", freq, 0.3, ctx.currentTime + t, 0.4);
+        });
+      } catch (e) { /* audio not available */ }
+    }
+
+    /* ==========================================================
+       SPEECH — Web Speech API
+       ──────────────────────────────────────────────────────────
+       speechSynthesis is a browser built-in for text-to-speech;
+       no imports or audio files needed. SpeechSynthesisUtterance
+       is the "request" object that holds the text and voice settings.
+       ========================================================== */
+    function speak(word) {
+      if (!window.speechSynthesis) return;   // guard: not all browsers support it
+      window.speechSynthesis.cancel();       // stop any speech already in progress
+      const utterance = new SpeechSynthesisUtterance(word);
+      utterance.rate  = 0.85;  // slightly slower — easier for young children to follow
+      utterance.pitch = 1.1;   // slightly higher pitch, friendlier tone
+      window.speechSynthesis.speak(utterance);
+    }
+
+    /* ==========================================================
+       CONFETTI
+       ──────────────────────────────────────────────────────────
+       Creates 55 small coloured divs, appends them to <body>, and
+       lets a CSS animation drop them down the screen with a
+       horizontal wobble (controlled by the --drift CSS variable).
+       Each piece removes itself when its animation ends.
+       ========================================================== */
+    function launchConfetti() {
+      const colors = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#f98d4b','#c084fc','#ffffff'];
+      const shapes = ['2px', '4px', '50%'];  // rectangle, rounded square, circle
+
+      for (let i = 0; i < 55; i++) {
+        const piece = document.createElement("div");
+        piece.className = "confetti-piece";
+
+        piece.style.left            = (Math.random() * 100) + "%";
+        piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.borderRadius    = shapes[Math.floor(Math.random() * shapes.length)];
+
+        const size = Math.random() * 8 + 8;   // 8–16 px
+        piece.style.width  = size + "px";
+        piece.style.height = (size * (Math.random() * 0.8 + 0.6)) + "px";
+
+        // --drift sets the horizontal wobble mid-fall (see @keyframes confetti-fall)
+        piece.style.setProperty("--drift", (Math.random() * 120 - 60) + "px");
+        // These inline longhands override the class's `animation` shorthand values
+        piece.style.animationDuration = (Math.random() * 1.5 + 1.8) + "s";
+        piece.style.animationDelay   = (Math.random() * 0.5) + "s";
+
+        document.body.appendChild(piece);
+        piece.addEventListener("animationend", () => piece.remove(), { once: true });
+      }
+    }
+
+    /* ==========================================================
+       EVENT LISTENERS
+       ──────────────────────────────────────────────────────────
+       Attach these once here, not inside repeated render functions,
+       so the same button never accidentally gains two listeners.
+
+       addEventListener(eventName, callback) is JS's way of saying
+       "run this function when this event happens on this element".
+       Arrow function syntax:  () => { … }  is like a lambda with
+       a block body in Python.
+       ========================================================== */
+
+    // Level-select buttons
+    document.querySelectorAll(".level-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        startGame(btn.dataset.level);
+      });
+    });
+
+    // Back button in game header
+    $backBtn.addEventListener("click", () => {
+      showStartScreen();
+    });
+
+    // End screen: replay the same level
+    document.getElementById("play-again-btn").addEventListener("click", () => {
+      startGame(state.level);
+    });
+
+    // End screen: go back to level select
+    document.getElementById("change-level-btn").addEventListener("click", () => {
+      showStartScreen();
+    });
+
+    /* ==========================================================
+       ENTRY POINT
+       ──────────────────────────────────────────────────────────
+       Code at the top level of a <script> runs immediately when
+       the browser reaches it (our script is after all HTML, so
+       the DOM is already built). This is like Python's:
+         if __name__ == "__main__":
+             showStartScreen()
+       ========================================================== */
+    showStartScreen();
+
+  </script>
+</body>
+</html>
