@@ -1115,20 +1115,54 @@
        autoplay policy), so we create it lazily on first use.
        ========================================================== */
 
-    let audioCtx = null;   // created once, reused for all sounds
+    let audioCtx = null;
 
     function getAudioContext() {
       if (!audioCtx) {
-        // webkitAudioContext is the older Safari prefix; || gives a fallback
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       }
-      // Resume if the context was suspended after the tab was backgrounded
-      if (audioCtx.state === "suspended") audioCtx.resume();
       return audioCtx;
     }
 
+    // ── iOS / Android audio unlock ──────────────────────────────
+    // Root cause of no sound on iPhone: AudioContext.resume() is *asynchronous*
+    // — it returns a Promise. The old code called resume() then immediately tried
+    // to play a buffer, but the context was still "suspended" at that moment.
+    // Fix: only play the silent buffer *after* the Promise resolves via .then().
+    function unlockAudio() {
+      const ctx = getAudioContext();
+      const playUnlockBuffer = () => {
+        try {
+          const buf = ctx.createBuffer(1, 1, 22050);
+          const src = ctx.createBufferSource();
+          src.buffer = buf;
+          src.connect(ctx.destination);
+          src.start(0);
+        } catch (e) {}
+      };
+      if (ctx.state === "running") {
+        playUnlockBuffer();
+      } else {
+        // .then() runs as a microtask — still within the user-gesture window on iOS 13+
+        ctx.resume().then(playUnlockBuffer).catch(() => {});
+      }
+    }
+
+    // Run fn(ctx) only once the AudioContext is confirmed "running".
+    // If it's suspended (backgrounded tab, or slow iOS resume), we wait.
+    // This is the key fix: makeNote() is never called on a suspended context.
+    function withAudio(fn) {
+      const ctx = getAudioContext();
+      if (ctx.state === "running") {
+        try { fn(ctx); } catch (e) {}
+      } else {
+        ctx.resume()
+          .then(() => { try { fn(ctx); } catch (e) {} })
+          .catch(() => {});
+      }
+    }
+
     // Build and immediately play one short tone.
-    // `type` is the waveform shape ("sine" = pure tone, "sawtooth" = buzzy).
     function makeNote(ctx, type, freq, volume, startTime, duration) {
       const osc  = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -1137,64 +1171,43 @@
       osc.type = type;
       osc.frequency.setValueAtTime(freq, startTime);
       gain.gain.setValueAtTime(volume, startTime);
-      // Exponential ramp fades out smoothly and avoids an audible click at the end
       gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
       osc.start(startTime);
       osc.stop(startTime + duration);
     }
 
-    // ── iOS / Android unlock ────────────────────────────────────
-    // On mobile browsers, AudioContext starts "suspended" even during a user
-    // gesture. Calling resume() alone is not enough on iOS — you must also
-    // *start* audio (even a silent buffer) inside the gesture handler.
-    // Call this from every button that leads into gameplay.
-    function unlockAudio() {
-      try {
-        const ctx = getAudioContext();
-        const buf = ctx.createBuffer(1, 1, 22050); // 1-sample silent buffer
-        const src = ctx.createBufferSource();
-        src.buffer = buf;
-        src.connect(ctx.destination);
-        src.start(0);
-      } catch (e) { /* audio not available — ignore */ }
-    }
-
-    // Two-note rising chime (C5 → E5) played on a correct letter drop
+    // Two-note rising chime (C5 → E5) — correct letter drop
     function playCorrect() {
-      try {
-        const ctx = getAudioContext();
-        makeNote(ctx, "sine", 523, 0.28, ctx.currentTime,        0.22); // C5
-        makeNote(ctx, "sine", 659, 0.28, ctx.currentTime + 0.10, 0.22); // E5
-      } catch (e) { /* audio not available — silently skip */ }
+      withAudio(ctx => {
+        makeNote(ctx, "sine", 523, 0.28, ctx.currentTime,        0.22);
+        makeNote(ctx, "sine", 659, 0.28, ctx.currentTime + 0.10, 0.22);
+      });
     }
 
-    // Descending sawtooth "bzzzt" played on a wrong letter drop
+    // Descending sawtooth buzz — wrong letter drop
     function playWrong() {
-      try {
-        const ctx  = getAudioContext();
+      withAudio(ctx => {
         const osc  = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.connect(gain);
         gain.connect(ctx.destination);
-        osc.type = "sawtooth";   // harsher waveform gives a "wrong" feel
+        osc.type = "sawtooth";
         osc.frequency.setValueAtTime(200, ctx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.35);
         gain.gain.setValueAtTime(0.2,   ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
         osc.start(ctx.currentTime);
         osc.stop(ctx.currentTime + 0.35);
-      } catch (e) { /* audio not available */ }
+      });
     }
 
-    // Ascending C-major arpeggio (C5 E5 G5 C6) played on word completion
+    // Ascending C-major arpeggio (C5 E5 G5 C6) — word complete
     function playWordComplete() {
-      try {
-        const ctx = getAudioContext();
-        // Each entry: [frequency Hz, delay in seconds from now]
+      withAudio(ctx => {
         [[523, 0.00], [659, 0.13], [784, 0.26], [1047, 0.39]].forEach(([freq, t]) => {
           makeNote(ctx, "sine", freq, 0.3, ctx.currentTime + t, 0.4);
         });
-      } catch (e) { /* audio not available */ }
+      });
     }
 
     /* ==========================================================
@@ -1293,6 +1306,14 @@
          if __name__ == "__main__":
              showStartScreen()
        ========================================================== */
+    // Belt-and-suspenders audio unlock: if the level-button click somehow
+    // didn't fully unlock the context (can happen on some older iOS versions),
+    // the very first touch anywhere on the page will try again.
+    // { once: true } means this listener removes itself after firing once.
+    // { passive: true } tells the browser this won't call preventDefault(),
+    // which improves scroll performance.
+    document.addEventListener("touchstart", unlockAudio, { once: true, passive: true });
+
     // Pre-load speech voices. On iOS, the voice list is populated asynchronously
     // after the page loads. Calling getVoices() here triggers that load so a voice
     // is available the first time speak() is called.
