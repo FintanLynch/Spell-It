@@ -1143,6 +1143,22 @@
       osc.stop(startTime + duration);
     }
 
+    // ── iOS / Android unlock ────────────────────────────────────
+    // On mobile browsers, AudioContext starts "suspended" even during a user
+    // gesture. Calling resume() alone is not enough on iOS — you must also
+    // *start* audio (even a silent buffer) inside the gesture handler.
+    // Call this from every button that leads into gameplay.
+    function unlockAudio() {
+      try {
+        const ctx = getAudioContext();
+        const buf = ctx.createBuffer(1, 1, 22050); // 1-sample silent buffer
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(ctx.destination);
+        src.start(0);
+      } catch (e) { /* audio not available — ignore */ }
+    }
+
     // Two-note rising chime (C5 → E5) played on a correct letter drop
     function playCorrect() {
       try {
@@ -1247,6 +1263,7 @@
     // Level-select buttons
     document.querySelectorAll(".level-btn").forEach(btn => {
       btn.addEventListener("click", () => {
+        unlockAudio();   // must happen inside the tap handler, before any sound plays
         startGame(btn.dataset.level);
       });
     });
@@ -1258,6 +1275,7 @@
 
     // End screen: replay the same level
     document.getElementById("play-again-btn").addEventListener("click", () => {
+      unlockAudio();   // re-unlock in case the context was suspended while on the end screen
       startGame(state.level);
     });
 
@@ -1275,6 +1293,14 @@
          if __name__ == "__main__":
              showStartScreen()
        ========================================================== */
+    // Pre-load speech voices. On iOS, the voice list is populated asynchronously
+    // after the page loads. Calling getVoices() here triggers that load so a voice
+    // is available the first time speak() is called.
+    if (window.speechSynthesis) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+    }
+
     showStartScreen();
 
   </script>
