@@ -201,6 +201,30 @@
       font-style: italic;
     }
 
+    /* 🔊 "Hear it!" button — tappable speech trigger */
+    .speak-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.22);
+      border: 2.5px solid rgba(255, 255, 255, 0.55);
+      border-radius: 50px;
+      color: #fff;
+      font-size: clamp(17px, 4vw, 22px);
+      font-family: inherit;
+      font-weight: 700;
+      padding: 10px 22px;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: background 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .speak-btn:active {
+      background: rgba(255, 255, 255, 0.38);
+      transform: scale(0.95);
+    }
+
     /* ============================================================
        7. LETTER SLOTS
        Empty boxes waiting for tiles. Dashed border shows "gap"
@@ -554,6 +578,9 @@
       <!-- Emoji "picture clue" — JS sets this for each word -->
       <div id="emoji-display" class="emoji-display" aria-label="Picture clue"></div>
 
+      <!-- Tap to hear the word spoken aloud — primary iOS speech trigger -->
+      <button id="speak-btn" class="speak-btn" aria-label="Hear the word">🔊 Hear it!</button>
+
       <p class="word-label">Spell this word!</p>
 
       <!-- Empty letter slots — built by JS per word -->
@@ -851,6 +878,11 @@
       });
 
       updateScoreDisplay();
+
+      // Speak the word after tiles have animated in (~350 ms stagger).
+      // Works reliably on the first word (within the button-click gesture chain).
+      // For subsequent words the 🔊 button provides the gesture-based trigger on iOS.
+      setTimeout(() => speak(state.currentWord.word), 380);
     }
 
     /* ==========================================================
@@ -1066,7 +1098,6 @@
       state.totalStars += earned;
       updateScoreDisplay();
       playWordComplete();                      // ascending arpeggio fanfare
-      speak(state.currentWord.word);           // pronounce the completed word
       launchConfetti();                        // shower of coloured pieces
       showWordOverlay(earned);
     }
@@ -1213,16 +1244,48 @@
     /* ==========================================================
        SPEECH — Web Speech API
        ──────────────────────────────────────────────────────────
-       speechSynthesis is a browser built-in for text-to-speech;
-       no imports or audio files needed. SpeechSynthesisUtterance
-       is the "request" object that holds the text and voice settings.
+       iOS requires speechSynthesis.speak() to be called inside a
+       user gesture (tap/click). The 🔊 button is the reliable
+       trigger. unlockSpeech() fires a silent utterance on the
+       first level-button tap so iOS "grants" speech permission,
+       then subsequent calls from the button always work.
        ========================================================== */
+    let selectedVoice = null;
+
+    function initVoices() {
+      if (!window.speechSynthesis) return;
+      const voices = window.speechSynthesis.getVoices();
+      // Prefer local, natural-sounding English voices in priority order
+      selectedVoice =
+        voices.find(v => v.name === 'Samantha') ||                         // iOS/macOS
+        voices.find(v => v.name === 'Google US English') ||                // Chrome desktop
+        voices.find(v => v.name === 'Karen') ||                            // macOS AU
+        voices.find(v => v.lang === 'en-US' && v.localService) ||          // any local en-US
+        voices.find(v => v.lang === 'en-GB' && v.localService) ||          // local en-GB
+        voices.find(v => v.lang.startsWith('en') && v.localService) ||     // any local English
+        voices.find(v => v.lang.startsWith('en')) ||                       // any English
+        null;
+    }
+
+    function unlockSpeech() {
+      if (!window.speechSynthesis) return;
+      // Speak an empty utterance in the gesture handler so iOS grants
+      // speech permission for this session.
+      const u = new SpeechSynthesisUtterance('​'); // zero-width space
+      u.volume = 0;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    }
+
     function speak(word) {
-      if (!window.speechSynthesis) return;   // guard: not all browsers support it
-      window.speechSynthesis.cancel();       // stop any speech already in progress
+      if (!window.speechSynthesis) return;
+      window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(word);
-      utterance.rate  = 0.85;  // slightly slower — easier for young children to follow
-      utterance.pitch = 1.1;   // slightly higher pitch, friendlier tone
+      utterance.lang  = 'en-US';
+      utterance.rate  = 0.78;   // slow and clear for young children
+      utterance.pitch = 1.05;
+      utterance.volume = 1.0;
+      if (selectedVoice) utterance.voice = selectedVoice;
       window.speechSynthesis.speak(utterance);
     }
 
@@ -1276,9 +1339,15 @@
     // Level-select buttons
     document.querySelectorAll(".level-btn").forEach(btn => {
       btn.addEventListener("click", () => {
-        unlockAudio();   // must happen inside the tap handler, before any sound plays
+        unlockAudio();    // must happen inside the tap handler, before any sound plays
+        unlockSpeech();   // fire a silent utterance so iOS grants speech permission
         startGame(btn.dataset.level);
       });
+    });
+
+    // 🔊 button — always within a user gesture, so iOS speech works reliably
+    document.getElementById("speak-btn").addEventListener("click", () => {
+      if (state.currentWord) speak(state.currentWord.word);
     });
 
     // Back button in game header
@@ -1314,12 +1383,11 @@
     // which improves scroll performance.
     document.addEventListener("touchstart", unlockAudio, { once: true, passive: true });
 
-    // Pre-load speech voices. On iOS, the voice list is populated asynchronously
-    // after the page loads. Calling getVoices() here triggers that load so a voice
-    // is available the first time speak() is called.
+    // Trigger voice list loading (async on iOS/Chrome). initVoices() picks the
+    // best English voice and stores it in selectedVoice for all speak() calls.
     if (window.speechSynthesis) {
-      window.speechSynthesis.getVoices();
-      window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+      initVoices();
+      window.speechSynthesis.onvoiceschanged = initVoices;
     }
 
     showStartScreen();
