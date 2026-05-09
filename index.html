@@ -2,21 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <!--
-    viewport meta: tells the browser to use the device's real width and
-    not to auto-zoom. Essential for tablets and phones.
-  -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#5b6cf9" />
-  <title>Spell It! 🌟</title>
+  <title>Fun Games! 🌟</title>
 
   <style>
     /* ============================================================
        1. RESET + CSS CUSTOM PROPERTIES
-       box-sizing: border-box means padding/border are included in
-       an element's width — simpler than the default "content-box".
-       CSS custom properties (--name) work like variables: define
-       once, use everywhere with var(--name).
        ============================================================ */
     *, *::before, *::after {
       box-sizing: border-box;
@@ -25,19 +17,14 @@
     }
 
     :root {
-      --tile-size:  72px;   /* width/height of each letter tile & slot */
-      --tile-font:  38px;   /* font size inside tiles */
-      --gap:        12px;   /* space between tiles/slots */
-      --radius:     14px;   /* corner rounding */
+      --tile-size:  72px;
+      --tile-font:  38px;
+      --gap:        12px;
+      --radius:     14px;
     }
 
     /* ============================================================
        2. BODY & APP CONTAINER
-       The body fills the viewport with a purple→violet gradient.
-       #app is a centred column that stretches to at least full
-       height; using align-items: flex-start on the body lets #app
-       grow taller than the viewport (allowing normal scroll) rather
-       than being clipped.
        ============================================================ */
     body {
       font-family: 'Trebuchet MS', 'Arial Rounded MT Bold', Arial, sans-serif;
@@ -45,7 +32,32 @@
       min-height: 100vh;
       display: flex;
       justify-content: center;
-      align-items: flex-start;  /* don't clip taller content */
+      align-items: flex-start;
+      transition: background 0.5s ease;
+    }
+    body[data-screen="screen-hunters-start"],
+    body[data-screen="screen-hunters-game"] {
+      background: linear-gradient(165deg, #23094e 0%, #110330 55%, #1c0848 100%);
+    }
+    body[data-screen="screen-spelling-start"],
+    body[data-screen="screen-spelling-game"] {
+      background: linear-gradient(155deg, #1e3a8a 0%, #312e81 100%);
+    }
+    body[data-screen="screen-math-start"],
+    body[data-screen="screen-math-game"] {
+      background: linear-gradient(155deg, #065f46 0%, #064e3b 100%);
+    }
+    body[data-screen="screen-reading-start"],
+    body[data-screen="screen-reading-game"] {
+      background: linear-gradient(155deg, #9a3412 0%, #7c2d12 100%);
+    }
+    body[data-screen="screen-colours-start"],
+    body[data-screen="screen-colours-game"] {
+      background: linear-gradient(155deg, #4c1d95 0%, #6b21a8 100%);
+    }
+    body[data-screen="screen-memory-start"],
+    body[data-screen="screen-memory-game"] {
+      background: linear-gradient(155deg, #134e4a 0%, #0a3330 100%);
     }
 
     #app {
@@ -54,15 +66,15 @@
       padding: 20px 16px;
       min-height: 100vh;
       display: flex;
-      align-items: center;      /* vertically centre screens within #app */
+      align-items: center;
       justify-content: center;
     }
 
     /* ============================================================
        3. SCREEN MANAGEMENT
-       Both screens live in the DOM; we toggle the .hidden class
-       to show/hide them. `!important` ensures .hidden always wins
-       even if another rule adds display: flex/block.
+       showScreen() hides every .screen div, then reveals the one
+       with the matching id. Adding a new game = add a new
+       <div class="screen"> in HTML; no JS routing changes needed.
        ============================================================ */
     .screen {
       width: 100%;
@@ -75,10 +87,152 @@
     .hidden { display: none !important; }
 
     /* ============================================================
-       4. START SCREEN
+       4. HOME SCREEN — GAME PICKER
+       Four large cards in a 2×2 grid. Each card has a big emoji
+       (picture) + a word label so a non-reader can navigate by
+       picture alone.
+       ============================================================ */
+    .home-title {
+      font-size: clamp(48px, 12vw, 90px);
+      color: white;
+      text-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
+      text-align: center;
+      line-height: 1.1;
+    }
+
+    .home-subtitle {
+      font-size: clamp(20px, 5vw, 26px);
+      color: rgba(255, 255, 255, 0.88);
+      text-align: center;
+    }
+
+    .game-picker {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      width: 100%;
+      max-width: 580px;
+    }
+    @media (max-width: 480px) {
+      .game-picker { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+    }
+    /* Centre the last card when it's alone in its row */
+    .game-card:last-child:nth-child(3n+1) { grid-column: 2; }
+
+    /* min-height: 170px is well above the 80×80 px accessibility minimum */
+    .game-card {
+      background: rgba(255, 255, 255, 0.16);
+      border: 3px solid rgba(255, 255, 255, 0.38);
+      border-radius: 24px;
+      padding: 28px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+      min-height: 170px;
+      transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+      color: white;
+      font-family: inherit;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .game-card[data-game="spelling"] { background: rgba(253, 224, 71,  0.22); border-color: rgba(253, 224, 71,  0.45); }
+    .game-card[data-game="math"]     { background: rgba(77,  150, 255,  0.22); border-color: rgba(77,  150, 255,  0.45); }
+    .game-card[data-game="reading"]  { background: rgba(107, 203, 119,  0.22); border-color: rgba(107, 203, 119,  0.45); }
+    .game-card[data-game="hunters"]  { background: rgba(192, 132, 252,  0.22); border-color: rgba(192, 132, 252,  0.45); }
+    .game-card[data-game="colours"]  { background: rgba(168, 85,  247,  0.22); border-color: rgba(168, 85,  247,  0.45); }
+    .game-card[data-game="memory"]   { background: rgba(20,  184, 166,  0.22); border-color: rgba(20,  184, 166,  0.45); }
+
+    .game-card:hover,
+    .game-card:focus {
+      transform: translateY(-4px) scale(1.04);
+      background: rgba(255, 255, 255, 0.30);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+      outline: 3px solid rgba(255, 255, 255, 0.7);
+      outline-offset: 2px;
+    }
+
+    .game-card:active { transform: scale(0.97); }
+
+    .game-card-emoji {
+      font-size: clamp(52px, 13vw, 72px);
+      line-height: 1;
+      user-select: none;
+      filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.2));
+    }
+
+    .game-card-name {
+      font-size: clamp(20px, 5vw, 26px);
+      font-weight: bold;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    .game-card-soon { opacity: 0.72; }
+
+    /* ============================================================
+       5. STANDALONE BACK BUTTON
+       Used on level-select screens (not inside a game-header).
+       align-self: flex-start keeps it pinned to the left edge.
+       ============================================================ */
+    .standalone-back {
+      align-self: flex-start;
+      background: rgba(255, 255, 255, 0.22);
+      border: 2px solid rgba(255, 255, 255, 0.45);
+      border-radius: 40px;
+      color: white;
+      font-size: 18px;
+      font-family: inherit;
+      font-weight: bold;
+      padding: 10px 20px;
+      min-height: 44px;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .standalone-back:hover { background: rgba(255, 255, 255, 0.38); }
+
+    /* ============================================================
+       6. TOAST NOTIFICATION ("Coming soon!")
+       Slides up from the bottom, auto-dismisses.
+       pointer-events: none means it never blocks taps underneath.
+       ============================================================ */
+    .toast {
+      position: fixed;
+      bottom: 48px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(20, 20, 55, 0.93);
+      color: white;
+      font-size: clamp(18px, 4.5vw, 24px);
+      font-weight: bold;
+      font-family: 'Trebuchet MS', Arial, sans-serif;
+      padding: 16px 36px;
+      border-radius: 50px;
+      z-index: 600;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      white-space: nowrap;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .toast.toast-visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ============================================================
+       7. LEVEL SELECT (shared by Spelling and Maths start screens)
        ============================================================ */
     .game-title {
-      font-size: clamp(52px, 13vw, 96px); /* fluid: never below 52px or above 96px */
+      font-size: clamp(52px, 13vw, 96px);
       color: white;
       text-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
       text-align: center;
@@ -92,7 +246,6 @@
       max-width: 480px;
     }
 
-    /* Level-select button row wraps on small screens */
     .level-select {
       display: flex;
       flex-wrap: wrap;
@@ -101,9 +254,8 @@
       width: 100%;
     }
 
-    /* Base level button style — each colour variant below overrides background/color */
     .level-btn {
-      flex: 1 1 160px;      /* grow/shrink, base width 160px */
+      flex: 1 1 160px;
       max-width: 210px;
       padding: 18px 16px;
       border: none;
@@ -114,6 +266,7 @@
       box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
       transition: transform 0.15s ease, box-shadow 0.15s ease;
       line-height: 1.4;
+      font-family: inherit;
     }
 
     .level-btn:hover,
@@ -125,11 +278,10 @@
 
     .level-btn:active { transform: scale(0.97); }
 
-    .easy-btn   { background: #4ade80; color: #14532d; } /* green  */
-    .medium-btn { background: #fbbf24; color: #78350f; } /* amber  */
-    .hard-btn   { background: #f87171; color: #7f1d1d; } /* red    */
+    .easy-btn   { background: #4ade80; color: #14532d; }
+    .medium-btn { background: #fbbf24; color: #78350f; }
+    .hard-btn   { background: #f87171; color: #7f1d1d; }
 
-    /* Small descriptor below each button label */
     .level-desc {
       display: block;
       font-size: 13px;
@@ -139,9 +291,77 @@
     }
 
     /* ============================================================
-       5. GAME SCREEN — HEADER
-       Three flex items: back button (left), score (centre), word
-       counter (right). space-between pushes them apart.
+       8. GAME LEVEL CARDS (shared — replaces old level-select on game screens)
+       ============================================================ */
+    .game-level-grid {
+      display: flex; flex-direction: column; gap: 14px;
+      width: 100%; max-width: 420px;
+    }
+    .game-level-card {
+      display: flex; align-items: center; gap: 18px;
+      padding: 18px 22px;
+      border-radius: 22px; border: 2px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.08);
+      cursor: pointer; touch-action: manipulation; font-family: inherit;
+      font-weight: bold; text-align: left; color: white;
+      transition: transform 0.16s, box-shadow 0.22s, background 0.16s, border-color 0.22s;
+      position: relative; overflow: hidden;
+    }
+    .game-level-card::after {
+      content: ""; position: absolute; top: 0; left: -80%;
+      width: 55%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+      transition: left 0.45s ease; pointer-events: none;
+    }
+    .game-level-card:hover::after { left: 130%; }
+    .game-level-card:hover  { transform: translateY(-5px); background: rgba(255,255,255,0.14); }
+    .game-level-card:active { transform: scale(0.95); }
+
+    .game-level-card.glv-easy {
+      border-color: rgba(74,222,128,0.55);
+      box-shadow: 0 4px 20px rgba(74,222,128,0.12);
+    }
+    .game-level-card.glv-easy:hover {
+      border-color: rgba(74,222,128,0.9);
+      box-shadow: 0 8px 40px rgba(74,222,128,0.35);
+    }
+    .game-level-card.glv-medium {
+      border-color: rgba(251,191,36,0.55);
+      box-shadow: 0 4px 20px rgba(251,191,36,0.12);
+    }
+    .game-level-card.glv-medium:hover {
+      border-color: rgba(251,191,36,0.9);
+      box-shadow: 0 8px 40px rgba(251,191,36,0.35);
+    }
+    .game-level-card.glv-hard {
+      border-color: rgba(248,113,113,0.55);
+      box-shadow: 0 4px 20px rgba(248,113,113,0.14);
+    }
+    .game-level-card.glv-hard:hover {
+      border-color: rgba(248,113,113,0.9);
+      box-shadow: 0 8px 40px rgba(248,113,113,0.38);
+    }
+
+    .glv-icon { font-size: 44px; flex-shrink: 0; line-height: 1; transition: transform 0.2s ease; }
+    .game-level-card:hover .glv-icon { transform: scale(1.2) rotate(-5deg); }
+    .glv-text { flex: 1; }
+    .glv-title { font-size: clamp(17px, 4.2vw, 21px); margin: 0 0 4px; }
+    .glv-desc  { font-size: clamp(12px, 2.8vw, 14px); opacity: 0.65; font-weight: normal; margin: 0; }
+    .glv-easy   .glv-title { color: #86efac; }
+    .glv-medium .glv-title { color: #fde68a; }
+    .glv-hard   .glv-title { color: #fca5a5; }
+
+    /* Per-game title size override (smaller so long titles fit on one line) */
+    #screen-spelling-start .game-title,
+    #screen-math-start .game-title,
+    #screen-reading-start .game-title,
+    #screen-colours-start .game-title {
+      font-size: clamp(28px, 7vw, 52px);
+    }
+
+    /* ============================================================
+       9. GAME HEADER (Back | Score | Progress)
+       Shared by all game screens that have a running session.
        ============================================================ */
     .game-header {
       width: 100%;
@@ -169,7 +389,7 @@
     .score-display {
       font-size: clamp(20px, 5vw, 28px);
       font-weight: bold;
-      color: #fde047;                           /* golden yellow */
+      color: #fde047;
       text-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
       text-align: center;
       flex: 1;
@@ -184,15 +404,13 @@
     }
 
     /* ============================================================
-       6. GAME SCREEN — EMOJI & INSTRUCTION
+       9. SPELLING GAME — EMOJI & INSTRUCTION
        ============================================================ */
-
-    /* The "picture" clue — an emoji scaled up large */
     .emoji-display {
       font-size: clamp(80px, 22vw, 150px);
       line-height: 1;
       filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.2));
-      user-select: none;  /* prevent accidental text selection on long-press */
+      user-select: none;
     }
 
     .word-label {
@@ -201,7 +419,6 @@
       font-style: italic;
     }
 
-    /* 🔊 "Hear it!" button — tappable speech trigger */
     .speak-btn {
       display: flex;
       align-items: center;
@@ -220,15 +437,14 @@
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
     }
+
     .speak-btn:active {
       background: rgba(255, 255, 255, 0.38);
       transform: scale(0.95);
     }
 
     /* ============================================================
-       7. LETTER SLOTS
-       Empty boxes waiting for tiles. Dashed border shows "gap"
-       for a letter; switches to solid/filled after correct drop.
+       10. LETTER SLOTS (Spelling)
        ============================================================ */
     .slots-area {
       display: flex;
@@ -252,14 +468,12 @@
       transition: background 0.15s, transform 0.12s;
     }
 
-    /* Used in Step 2: glow when a dragged tile hovers over this slot */
     .slot.drag-over {
       background: rgba(255, 255, 255, 0.30);
       transform: scale(1.09);
       border-color: rgba(255, 255, 255, 0.85);
     }
 
-    /* After the correct letter is placed */
     .slot.filled {
       border-style: solid;
       border-color: rgba(255, 255, 255, 0.75);
@@ -267,33 +481,26 @@
     }
 
     /* ============================================================
-       8. LETTER TILES
-       Each tile is a coloured card with a single capital letter.
-       Colour is set via a CSS custom property --tile-bg, which is
-       overridden per-tile by a [data-color-index] attribute rule.
+       11. LETTER / NUMBER TILES (shared look across games)
        ============================================================ */
     .tiles-area {
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
       gap: var(--gap);
-      min-height: var(--tile-size);   /* keeps area from collapsing when all tiles are lifted */
+      min-height: var(--tile-size);
     }
 
-    /*
-      Six colour swatches. The [attr="val"] selector has specificity
-      (0,2,0) — higher than .tile's (0,1,0) — so it wins and its
-      --tile-bg value is what `background: var(--tile-bg)` below sees.
-    */
-    .tile[data-color-index="0"] { --tile-bg: #ff6b6b; } /* coral   */
-    .tile[data-color-index="1"] { --tile-bg: #ffd93d; } /* yellow  */
-    .tile[data-color-index="2"] { --tile-bg: #6bcb77; } /* green   */
-    .tile[data-color-index="3"] { --tile-bg: #4d96ff; } /* blue    */
-    .tile[data-color-index="4"] { --tile-bg: #f98d4b; } /* orange  */
-    .tile[data-color-index="5"] { --tile-bg: #c084fc; } /* violet  */
+    /* Six colour swatches — cycle through with data-color-index */
+    .tile[data-color-index="0"] { --tile-bg: #ff6b6b; }
+    .tile[data-color-index="1"] { --tile-bg: #ffd93d; }
+    .tile[data-color-index="2"] { --tile-bg: #6bcb77; }
+    .tile[data-color-index="3"] { --tile-bg: #4d96ff; }
+    .tile[data-color-index="4"] { --tile-bg: #f98d4b; }
+    .tile[data-color-index="5"] { --tile-bg: #c084fc; }
 
     .tile {
-      --tile-bg: #ff6b6b;              /* fallback colour if data-color-index is absent */
+      --tile-bg: #ff6b6b;
       width:  var(--tile-size);
       height: var(--tile-size);
       border-radius: var(--radius);
@@ -307,12 +514,7 @@
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
       user-select: none;
       cursor: grab;
-      /*
-        touch-action: none tells the browser NOT to handle scroll/pinch
-        on this element, so our Pointer Event handlers (Step 2) get
-        every touch event uninterrupted.
-      */
-      touch-action: none;
+      touch-action: none;  /* hand all touch events to Pointer Events handlers */
       transition: transform 0.12s ease, box-shadow 0.12s ease;
     }
 
@@ -321,83 +523,155 @@
       box-shadow: 0 9px 22px rgba(0, 0, 0, 0.3);
     }
 
-    /* ---- Drag states (CSS ready; JS wires them up in Step 2) ---- */
-
-    /* The original tile becomes a ghost while it's being dragged */
     .tile.dragging {
       opacity: 0.28;
       cursor: grabbing;
     }
 
-    /* A cloned copy of the tile that travels with the pointer */
+    /* The floating clone that follows the pointer during a drag */
     .tile.drag-ghost {
       position: fixed;
       z-index: 999;
-      pointer-events: none;   /* ghost doesn't block pointer events on what's below */
+      pointer-events: none;
       cursor: grabbing;
       box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35);
       transform: scale(1.15) rotate(4deg);
-      transition: none;       /* ghost must follow pointer with zero lag */
+      transition: none;
     }
 
     /* ============================================================
-       9. ANIMATIONS
-       Defined here; triggered by adding/removing CSS classes in JS.
+       12. ANIMATIONS
        ============================================================ */
 
-    /* Shake: wrong letter dropped */
     @keyframes shake {
-      0%   { transform: translateX(0);    }
+      0%   { transform: translateX(0); }
       18%  { transform: translateX(-10px); }
       36%  { transform: translateX( 10px); }
       54%  { transform: translateX( -7px); }
       72%  { transform: translateX(  7px); }
       90%  { transform: translateX( -3px); }
-      100% { transform: translateX(0);    }
+      100% { transform: translateX(0); }
     }
 
     .tile.shake { animation: shake 0.45s ease; }
 
-    /* Snap-in: correct letter lands in its slot */
     @keyframes snap-in {
       0%   { transform: scale(1.4);  }
       55%  { transform: scale(0.88); }
       100% { transform: scale(1);    }
     }
 
-    .slot.snap { animation: snap-in 0.28s ease forwards; }
+    .slot.snap   { animation: snap-in 0.28s ease forwards; }
+    /* Math slot reuses the same snap-in animation */
+    .eq-slot.snap { animation: snap-in 0.28s ease forwards; }
 
-    /* Tile entrance: each tile rises up when a new word loads */
     @keyframes tile-enter {
       from { transform: translateY(36px); opacity: 0; }
       to   { transform: translateY(0);    opacity: 1; }
     }
 
-    /*
-      `backwards` fill-mode: the `from` keyframe (invisible, offset)
-      is applied during the animation-delay period, so tiles that
-      start late are hidden rather than briefly visible before their
-      animation begins.
-    */
     .tile.enter { animation: tile-enter 0.32s ease backwards; }
 
     /* ============================================================
-       10. RESPONSIVE BREAKPOINTS
-       Override the CSS variables at different viewport widths.
-       Everything that uses var(--tile-size) etc. automatically
-       scales — we don't need to rewrite any layout rules.
+       13. MATH GAME
+       The equation "3 + [slot] = 7" is a flex row.
+       The slot is the drag target; the rest is static text.
        ============================================================ */
 
-    /* Small phones */
+    /* Framed card that contains the whole equation */
+    .math-equation {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 22px;
+      padding: 24px 28px;
+      width: 100%;
+      max-width: 540px;
+    }
+
+    /* Each number/symbol in the equation */
+    .eq-part {
+      font-size: clamp(48px, 12vw, 80px);
+      font-weight: bold;
+      color: white;
+      text-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+      min-width: 52px;
+      text-align: center;
+      line-height: 1;
+      user-select: none;
+    }
+
+    /* The + / - gets a gold tint so it stands out clearly */
+    .eq-operator { color: #fde047; }
+
+    /*
+      The blank slot — styled like letter slots but sized for
+      two-digit numbers. Must be ≥ 80×80 px per accessibility rules.
+    */
+    .eq-slot {
+      width: 88px;
+      height: 88px;
+      border: 4px dashed rgba(255, 255, 255, 0.65);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.10);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(44px, 11vw, 60px);
+      font-weight: bold;
+      color: white;
+      transition: background 0.15s, transform 0.12s;
+      flex-shrink: 0;
+    }
+
+    .eq-slot.drag-over {
+      background: rgba(255, 255, 255, 0.30);
+      transform: scale(1.09);
+      border-color: rgba(255, 255, 255, 0.90);
+      border-style: solid;
+    }
+
+    .eq-slot.filled {
+      border-style: solid;
+      border-color: rgba(255, 255, 255, 0.75);
+      background: rgba(255, 255, 255, 0.22);
+    }
+
+    /* Number choices area */
+    .math-tiles-area {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      min-height: 88px;
+    }
+
+    /* Math tiles are larger than spelling tiles for two-digit numbers */
+    .math-tile {
+      width: 88px;
+      height: 88px;
+      font-size: clamp(36px, 9vw, 52px);
+    }
+
+    /* ============================================================
+       14. RESPONSIVE BREAKPOINTS
+       ============================================================ */
+
     @media (max-width: 480px) {
       :root {
         --tile-size: 56px;
         --tile-font: 28px;
         --gap: 8px;
       }
+      /* Scale math equation down on small phones so it fits in one row */
+      .eq-part     { font-size: 38px; min-width: 34px; }
+      .eq-slot     { width: 72px; height: 72px; font-size: 36px; }
+      .math-tile   { width: 80px; height: 80px; }
+      .math-equation { gap: 8px; padding: 16px 12px; }
     }
 
-    /* Large tablets / desktop */
     @media (min-width: 640px) {
       :root {
         --tile-size: 80px;
@@ -407,17 +681,15 @@
     }
 
     /* ============================================================
-       WORD-COMPLETE OVERLAY
-       `position: fixed; inset: 0` stretches the overlay to cover
-       the entire viewport regardless of scroll position.
+       WORD-COMPLETE OVERLAY (shared across all games)
        ============================================================ */
     .word-overlay {
       position: fixed;
-      inset: 0;           /* shorthand for top:0; right:0; bottom:0; left:0 */
+      inset: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 200;       /* above everything else */
+      z-index: 200;
       background: rgba(0, 0, 0, 0.38);
       animation: overlay-bg-in 0.25s ease;
     }
@@ -427,14 +699,12 @@
       to   { opacity: 1; }
     }
 
-    /* The white card that pops in the centre */
     .word-overlay-card {
       background: white;
       border-radius: 28px;
       padding: 36px 52px;
       text-align: center;
       box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
-      /* cubic-bezier with overshoot gives a satisfying "boing" pop */
       animation: overlay-card-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
@@ -457,7 +727,7 @@
     }
 
     /* ============================================================
-       END SCREEN
+       END SCREEN (shared across all games)
        ============================================================ */
     .end-title {
       font-size: clamp(36px, 9vw, 70px);
@@ -506,26 +776,732 @@
     }
 
     /* ============================================================
+       15. READING GAME
+       The story lives in a framed card; the answers are a vertical
+       stack of large buttons. No drag needed — just tap.
+       ============================================================ */
+
+    /* Framed card holding the story emoji, text, and speak button */
+    .reading-story-card {
+      background: rgba(255, 255, 255, 0.14);
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      border-radius: 24px;
+      padding: 24px 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      width: 100%;
+      max-width: 600px;
+    }
+
+    /* Big emoji picture clue above the story text */
+    .reading-emoji {
+      font-size: clamp(72px, 18vw, 120px);
+      line-height: 1;
+      user-select: none;
+      filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
+    }
+
+    /* The story text — large, easy to read, italic for narrative feel */
+    .reading-text {
+      font-size: clamp(22px, 5.5vw, 32px);
+      color: white;
+      text-align: center;
+      line-height: 1.55;
+      font-style: italic;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Question + its speak button, centred below the story card */
+    .reading-question-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      max-width: 600px;
+    }
+
+    /* The question itself — bold, golden, clearly the "task" */
+    .reading-question {
+      font-size: clamp(24px, 6vw, 36px);
+      font-weight: bold;
+      color: #fde047;
+      text-align: center;
+      line-height: 1.3;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Vertical stack of answer buttons */
+    .reading-answers {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      width: 100%;
+      max-width: 560px;
+    }
+
+    /*
+      Each answer button — min-height 80 px meets the accessibility
+      requirement. Full-width with emoji on the left, label on the right.
+      Tapping speaks the label AND evaluates the answer.
+    */
+    .answer-btn {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      background: rgba(255, 255, 255, 0.18);
+      border: 3px solid rgba(255, 255, 255, 0.4);
+      border-radius: 20px;
+      padding: 14px 24px;
+      min-height: 82px;
+      font-size: clamp(20px, 5vw, 28px);
+      font-weight: bold;
+      color: white;
+      font-family: inherit;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+      text-align: left;
+      width: 100%;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+    }
+
+    .answer-btn:hover,
+    .answer-btn:focus {
+      transform: translateX(6px);
+      background: rgba(255, 255, 255, 0.28);
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.25);
+      outline: 3px solid rgba(255, 255, 255, 0.6);
+      outline-offset: 2px;
+    }
+
+    .answer-btn:active { transform: scale(0.97); }
+
+    /* Emoji inside the answer button */
+    .answer-btn-emoji {
+      font-size: clamp(36px, 9vw, 48px);
+      line-height: 1;
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .answer-btn-label { flex: 1; }
+
+    /* Green glow when the correct answer is tapped */
+    .answer-btn.answer-correct {
+      background: rgba(74, 222, 128, 0.45);
+      border-color: #4ade80;
+      transform: scale(1.03);
+    }
+
+    /* Wrong answer: reuse the same shake keyframe as letter tiles */
+    .answer-btn.shake { animation: shake 0.45s ease; }
+
+    /* ============================================================
+       16. SINGING HUNTERS GAME
+       Dark K-pop concert stage. Yuna (purple) and Juno (orange)
+       flank a swappable centre (rhythm lane or demon arena).
+       ============================================================ */
+
+    /* ── Concert atmosphere ──────────────────────────────────── */
+    /* Body background is controlled by body[data-screen] — screens
+       are transparent so the body gradient shows through uniformly */
+    #screen-hunters-start,
+    #screen-hunters-game {
+      color: white;
+      min-height: 92vh;
+    }
+
+    /* Twinkling starfield across the full viewport on level select */
+    #screen-hunters-start::before {
+      content: "";
+      position: fixed; inset: 0;
+      background-image:
+        radial-gradient(2px 2px   at  9% 14%, rgba(255,255,255,0.85) 0%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 28%  6%, rgba(255,160,255,0.7) 0%, transparent 100%),
+        radial-gradient(2.5px 2.5px at 65% 20%, rgba(255,255,255,0.8) 0%, transparent 100%),
+        radial-gradient(2px 2px   at 83% 10%, rgba(220,150,255,0.85) 0%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 93% 40%, rgba(255,255,255,0.6) 0%, transparent 100%),
+        radial-gradient(2px 2px   at 18% 52%, rgba(255,120,255,0.65) 0%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 50% 70%, rgba(140,200,255,0.7) 0%, transparent 100%),
+        radial-gradient(2px 2px   at 73% 80%, rgba(255,255,255,0.65) 0%, transparent 100%),
+        radial-gradient(1.5px 1.5px at  6% 85%, rgba(255,160,200,0.65) 0%, transparent 100%),
+        radial-gradient(2px 2px   at 43% 91%, rgba(180,255,255,0.65) 0%, transparent 100%),
+        radial-gradient(1px 1px   at 60% 47%, rgba(255,255,255,0.5)  0%, transparent 100%),
+        radial-gradient(1px 1px   at 35% 78%, rgba(255,220,255,0.55) 0%, transparent 100%);
+      pointer-events: none; z-index: 0;
+      animation: star-twinkle 3s ease-in-out infinite alternate;
+    }
+    @keyframes star-twinkle {
+      from { opacity: 0.5; }
+      to   { opacity: 1.0; }
+    }
+    #screen-hunters-start { position: relative; }
+    #screen-hunters-start > * { position: relative; z-index: 1; }
+
+    /* Title: smaller so "🎤 Singing Hunters!" stays on one line */
+    #screen-hunters-start .game-title {
+      font-size: clamp(26px, 6.5vw, 46px);
+      white-space: nowrap;
+      color: #e879f9;
+      animation: title-pulse 2.4s ease-in-out infinite alternate;
+      margin-bottom: 2px;
+    }
+    @keyframes title-pulse {
+      from { text-shadow: 0 0 14px rgba(232,121,249,0.7), 0 0 36px rgba(232,121,249,0.25); }
+      to   { text-shadow: 0 0 28px rgba(232,121,249,1),   0 0 70px rgba(232,121,249,0.55), 0 0 120px rgba(200,80,255,0.2); }
+    }
+    #screen-hunters-start .subtitle { color: rgba(240,180,255,0.8); font-size: clamp(13px, 3.2vw, 16px); }
+
+    /* Back button dark-glass variant for hunters */
+    .hunters-back {
+      background: rgba(80,20,140,0.45) !important;
+      border-color: rgba(168,85,247,0.5) !important;
+      color: rgba(230,180,255,0.95) !important;
+      backdrop-filter: blur(8px);
+    }
+    .hunters-back:hover { background: rgba(100,40,180,0.6) !important; }
+
+    /* ── Level-select: character float animation ────────────── */
+    @keyframes idol-float {
+      0%,100% { transform: translateY(0)    rotate(0deg);   }
+      40%     { transform: translateY(-9px) rotate(-3deg);  }
+      70%     { transform: translateY(-5px) rotate(2deg);   }
+    }
+    #screen-hunters-start svg { animation: idol-float 3.2s ease-in-out infinite; }
+    #screen-hunters-start svg + svg { animation-delay: -1.6s; }
+
+    /* ── Level-select cards ──────────────────────────────────── */
+    .hunters-level-grid {
+      display: flex; flex-direction: column; gap: 14px;
+      width: 100%; max-width: 420px;
+    }
+
+    .hunters-level-card {
+      display: flex; align-items: center; gap: 18px;
+      padding: 18px 22px;
+      border-radius: 22px; border: 2px solid transparent;
+      background: rgba(255,255,255,0.05);
+      cursor: pointer; touch-action: manipulation; font-family: inherit;
+      font-weight: bold; text-align: left;
+      transition: transform 0.16s, box-shadow 0.22s, background 0.16s;
+      position: relative; overflow: hidden;
+    }
+    /* Shimmer sweep on hover */
+    .hunters-level-card::after {
+      content: "";
+      position: absolute; top: 0; left: -80%;
+      width: 55%; height: 100%;
+      background: linear-gradient(90deg,
+        transparent, rgba(255,255,255,0.1), transparent);
+      transition: left 0.45s ease;
+      pointer-events: none;
+    }
+    .hunters-level-card:hover::after { left: 130%; }
+    .hunters-level-card:hover  { transform: translateY(-5px); background: rgba(255,255,255,0.09); }
+    .hunters-level-card:active { transform: scale(0.95); }
+
+    .hunters-level-card.easy-card {
+      border-color: rgba(74,222,128,0.55);
+      box-shadow: 0 4px 20px rgba(74,222,128,0.12),
+                  inset 0 1px 0 rgba(74,222,128,0.12);
+    }
+    .hunters-level-card.easy-card:hover {
+      box-shadow: 0 8px 40px rgba(74,222,128,0.35),
+                  inset 0 1px 0 rgba(74,222,128,0.15);
+      border-color: rgba(74,222,128,0.9);
+    }
+    .hunters-level-card.medium-card {
+      border-color: rgba(251,191,36,0.55);
+      box-shadow: 0 4px 20px rgba(251,191,36,0.12),
+                  inset 0 1px 0 rgba(251,191,36,0.12);
+    }
+    .hunters-level-card.medium-card:hover {
+      box-shadow: 0 8px 40px rgba(251,191,36,0.35),
+                  inset 0 1px 0 rgba(251,191,36,0.15);
+      border-color: rgba(251,191,36,0.9);
+    }
+    .hunters-level-card.hard-card {
+      border-color: rgba(248,113,113,0.55);
+      box-shadow: 0 4px 20px rgba(248,113,113,0.14),
+                  inset 0 1px 0 rgba(248,113,113,0.12);
+    }
+    .hunters-level-card.hard-card:hover {
+      box-shadow: 0 8px 40px rgba(248,113,113,0.38),
+                  inset 0 1px 0 rgba(248,113,113,0.15);
+      border-color: rgba(248,113,113,0.9);
+    }
+
+    .hunters-card-icon {
+      font-size: 46px; flex-shrink: 0; line-height: 1;
+      filter: drop-shadow(0 0 10px currentColor);
+      transition: transform 0.2s ease;
+    }
+    .hunters-level-card:hover .hunters-card-icon { transform: scale(1.2) rotate(-5deg); }
+    .hunters-card-text { flex: 1; }
+    .hunters-card-title {
+      font-size: clamp(17px, 4.2vw, 21px); margin: 0 0 5px; color: white;
+    }
+    .hunters-card-desc {
+      font-size: clamp(12px, 2.8vw, 14px); opacity: 0.65;
+      font-weight: normal; margin: 0; color: white;
+    }
+    .easy-card   .hunters-card-title { color: #86efac; }
+    .medium-card .hunters-card-title { color: #fde68a; }
+    .hard-card   .hunters-card-title { color: #fca5a5; }
+
+    /* ── Game screen layout ──────────────────────────────────── */
+    #screen-hunters-game { justify-content: flex-start; padding-top: 0; gap: 14px; }
+
+    #screen-hunters-game .game-header {
+      background: rgba(20,4,50,0.55);
+      border-bottom: 1px solid rgba(168,85,247,0.3);
+      backdrop-filter: blur(10px);
+      width: 100%; max-width: 100%;
+    }
+    #hunters-score    { color: #f0abfc; font-weight: bold; }
+    #hunters-progress { color: rgba(220,180,255,0.75); font-size: 14px; }
+
+    /* ── Concert stage ───────────────────────────────────────── */
+    .hunters-stage {
+      display: flex; align-items: flex-end; justify-content: center;
+      gap: 10px; width: 100%; max-width: 520px; position: relative;
+      padding: 14px 10px 0; min-height: 190px;
+    }
+
+    /* Animated spotlight beams from above */
+    .hunters-stage::before {
+      content: "";
+      position: absolute; top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 180%; height: 100%;
+      background:
+        conic-gradient(from 256deg at 28% 0%, transparent 0deg, rgba(192,132,252,0.2) 9deg, transparent 18deg),
+        conic-gradient(from 256deg at 50% 0%, transparent 0deg, rgba(249,168,212,0.16) 11deg, transparent 22deg),
+        conic-gradient(from 256deg at 72% 0%, transparent 0deg, rgba(103,232,249,0.13) 9deg, transparent 18deg);
+      pointer-events: none; z-index: 0;
+      animation: beam-sway 4.5s ease-in-out infinite alternate;
+    }
+    @keyframes beam-sway {
+      from { opacity: 0.65; transform: translateX(-50%) scaleX(1); }
+      to   { opacity: 1.0;  transform: translateX(-50%) scaleX(1.18); }
+    }
+
+    /* Neon stage floor */
+    .hunters-stage::after {
+      content: "";
+      position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg,
+        transparent, rgba(192,132,252,0.7) 20%,
+        rgba(249,168,212,0.95) 50%,
+        rgba(192,132,252,0.7) 80%, transparent);
+      box-shadow: 0 0 18px rgba(192,132,252,0.55), 0 0 40px rgba(249,168,212,0.3);
+    }
+    .hunters-stage > * { position: relative; z-index: 1; }
+
+    /* ── Characters ──────────────────────────────────────────── */
+    .hunter-char {
+      flex-shrink: 0; width: 100px;
+      display: flex; align-items: flex-end; justify-content: center;
+      user-select: none;
+      filter: drop-shadow(0 0 10px rgba(192,132,252,0.4)) drop-shadow(0 4px 8px rgba(0,0,0,0.6));
+    }
+    .hunter-char svg { width: 100%; height: auto; }
+
+    @keyframes hunter-sing {
+      0%   { transform: translateY(0)     rotate(0deg);    scale: 1;    }
+      20%  { transform: translateY(-20px) rotate(-11deg);  scale: 1.1;  }
+      55%  { transform: translateY(-13px) rotate(  9deg);  scale: 1.06; }
+      80%  { transform: translateY(-6px)  rotate( -4deg);  scale: 1.02; }
+      100% { transform: translateY(0)     rotate(0deg);    scale: 1;    }
+    }
+    .hunter-char.singing { animation: hunter-sing 0.7s ease; }
+
+    /* Swappable centre slot */
+    .hunters-center {
+      flex: 1; max-width: 160px;
+      display: flex; flex-direction: column; align-items: center;
+    }
+
+    /* ── Rhythm lane ─────────────────────────────────────────── */
+    .hunters-lane {
+      width: 100%; height: 300px;
+      background: linear-gradient(180deg, rgba(8,0,24,0.9) 0%, rgba(28,0,55,0.85) 100%);
+      border: 2px solid rgba(192,132,252,0.45);
+      border-radius: 18px;
+      position: relative; overflow: hidden;
+      box-shadow: 0 0 28px rgba(192,132,252,0.18) inset, 0 0 50px rgba(0,0,0,0.6);
+    }
+    .hunters-lane::before {
+      content: "";
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(90deg,
+        transparent 0px, transparent 30px,
+        rgba(255,255,255,0.018) 30px, rgba(255,255,255,0.018) 32px);
+      pointer-events: none;
+    }
+
+    .hunters-tap-zone {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 110px;
+      background: rgba(192,132,252,0.05);
+      border-top: 2px dashed rgba(192,132,252,0.4);
+      border-radius: 0 0 16px 16px;
+      transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+    }
+    .hunters-tap-zone.zone-active {
+      background: rgba(253,224,71,0.16);
+      border-color: rgba(253,224,71,0.95);
+      box-shadow: 0 0 38px rgba(253,224,71,0.45) inset;
+    }
+
+    .hunter-note {
+      position: absolute; width: 70px; height: 70px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; font-size: 32px;
+      user-select: none; pointer-events: none;
+      box-shadow: 0 0 22px currentColor;
+    }
+
+    @keyframes note-catch {
+      0%   { transform: scale(1);   opacity: 1; }
+      55%  { transform: scale(2.7); opacity: 0.7; }
+      100% { transform: scale(0);   opacity: 0; }
+    }
+    .hunter-note.note-caught { animation: note-catch 0.4s ease-out forwards; }
+
+    @keyframes note-miss {
+      0%   { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(50px); }
+    }
+    .hunter-note.note-missed { animation: note-miss 0.35s ease-in forwards; }
+
+    /* ── Rhythm controls ─────────────────────────────────────── */
+    #hunters-rhythm-controls {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 10px; width: 100%; max-width: 420px; padding: 0 8px;
+    }
+
+    .hunters-shadows { position: relative; width: 100%; height: 64px; }
+
+    .shadow-creature {
+      position: absolute; bottom: 0;
+      width: 52px; height: 58px;
+      background: linear-gradient(135deg, #1a0040, #0d001f);
+      clip-path: polygon(50% 0%,88% 22%,100% 58%,78% 92%,50% 100%,22% 92%,0% 58%,12% 22%);
+      filter: drop-shadow(0 0 10px rgba(150,0,255,0.6));
+      animation: shadow-appear 1.5s ease forwards;
+    }
+    @keyframes shadow-appear {
+      0%   { opacity: 0;   transform: scale(0.3) rotate(-20deg); }
+      20%  { opacity: 1.0; transform: scale(1.15) rotate(6deg);  }
+      65%  { opacity: 0.9; transform: scale(1)   rotate(-3deg);  }
+      100% { opacity: 0;   transform: scale(0.7) rotate(15deg);  }
+    }
+
+    .hunters-tap-btn {
+      width: 100%; max-width: 420px; min-height: 90px;
+      background: linear-gradient(135deg, rgba(192,132,252,0.28) 0%, rgba(249,168,212,0.18) 100%);
+      border: 2px solid rgba(192,132,252,0.55);
+      border-radius: 24px; color: white;
+      font-size: clamp(24px, 6vw, 36px);
+      font-weight: bold; font-family: inherit;
+      cursor: pointer; touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      box-shadow: 0 4px 28px rgba(192,132,252,0.22);
+      transition: transform 0.08s ease, background 0.12s ease;
+      letter-spacing: 0.04em;
+      text-shadow: 0 0 14px rgba(255,255,255,0.45);
+    }
+    .hunters-tap-btn:active { transform: scale(0.93); }
+
+    @keyframes tap-pulse {
+      0%,100% { box-shadow: 0 0 12px rgba(253,224,71,0.45), 0 4px 20px rgba(0,0,0,0.3); }
+      50%     { box-shadow: 0 0 55px rgba(253,224,71,0.98), 0 4px 20px rgba(0,0,0,0.3); }
+    }
+    .hunters-tap-btn.tap-active {
+      background: linear-gradient(135deg, rgba(253,224,71,0.42) 0%, rgba(250,200,30,0.28) 100%);
+      border-color: rgba(253,224,71,0.95);
+      animation: tap-pulse 0.5s ease infinite;
+    }
+
+    /* ── Demon arena ─────────────────────────────────────────── */
+    .demon-arena {
+      width: 100%; height: 230px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      position: relative; gap: 8px;
+    }
+    .demon-arena::after {
+      content: "";
+      position: absolute; bottom: 0; left: 0; right: 0; height: 55px;
+      background: linear-gradient(0deg, rgba(80,0,160,0.35), transparent);
+      pointer-events: none;
+    }
+
+    #hunters-pitch-label {
+      font-size: clamp(13px, 3.2vw, 16px); font-weight: bold;
+      color: rgba(255,180,255,0.9); text-align: center;
+      padding: 5px 12px;
+      background: rgba(0,0,0,0.45);
+      border-radius: 10px; min-height: 28px;
+      letter-spacing: 0.04em; z-index: 2;
+    }
+
+    /* Demon SVG built by JS */
+    .demon-creature {
+      width: 115px; height: 135px;
+      animation: demon-enter 0.65s cubic-bezier(0.34,1.56,0.64,1) forwards;
+      filter:
+        drop-shadow(0 0 25px rgba(200,0,255,0.85))
+        drop-shadow(0 0 8px rgba(255,0,80,0.45));
+    }
+    @keyframes demon-enter {
+      0%   { transform: translateY(70px) scale(0.25) rotate(18deg); opacity: 0; }
+      60%  { transform: translateY(-14px) scale(1.1) rotate(-6deg); opacity: 1; }
+      100% { transform: translateY(0)    scale(1)   rotate(0);     opacity: 1; }
+    }
+    @keyframes demon-defeated {
+      0%   { transform: scale(1)    rotate(0deg);    opacity: 1;   filter: saturate(1); }
+      25%  { transform: scale(1.4)  rotate(-22deg);  opacity: 0.9; filter: saturate(4) brightness(2.5); }
+      100% { transform: scale(0)    rotate(45deg);   opacity: 0;   filter: saturate(0); }
+    }
+    .demon-creature.demon-defeated { animation: demon-defeated 0.6s ease-out forwards; }
+
+    @keyframes demon-surge {
+      0%   { transform: translateY(0) scale(1); }
+      35%  { transform: translateY(24px) scale(1.18); filter: drop-shadow(0 0 36px rgba(255,0,0,1)); }
+      100% { transform: translateY(0) scale(1); }
+    }
+    .demon-creature.demon-surge { animation: demon-surge 0.48s ease; }
+
+    .demon-eye { animation: eye-pulse 0.78s ease-in-out infinite alternate; }
+    @keyframes eye-pulse {
+      from { opacity: 0.45; }
+      to   { opacity: 1.0;  }
+    }
+
+    /* ── Pitch answer buttons ────────────────────────────────── */
+    #hunters-pitch-controls {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 10px; width: 100%; padding: 0 8px;
+    }
+    #hunters-pitch-instruction {
+      color: rgba(255,200,255,0.85); font-size: clamp(14px, 3.5vw, 17px);
+      text-align: center; margin: 0;
+    }
+
+    .pitch-buttons { display: flex; gap: 12px; width: 100%; max-width: 500px; }
+
+    .pitch-btn {
+      flex: 1; min-height: 90px;
+      font-size: clamp(15px, 3.8vw, 20px);
+      font-weight: bold; font-family: inherit;
+      border: 2px solid transparent; border-radius: 18px;
+      cursor: pointer; touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      box-shadow: 0 6px 22px rgba(0,0,0,0.45);
+      transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 5px;
+    }
+    .pitch-btn:hover  { transform: translateY(-4px) scale(1.05); box-shadow: 0 12px 30px rgba(0,0,0,0.55); }
+    .pitch-btn:active { transform: scale(0.91); }
+    .pitch-btn:disabled { opacity: 0.4; cursor: default; transform: none; }
+
+    .low-pitch-btn  {
+      background: linear-gradient(160deg,#14532d,#166534);
+      border-color: rgba(74,222,128,0.5); color: #bbf7d0;
+      box-shadow: 0 6px 22px rgba(0,0,0,0.4), 0 0 18px rgba(74,222,128,0.15);
+    }
+    .low-pitch-btn:not(:disabled):hover {
+      border-color: rgba(74,222,128,0.9);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 28px rgba(74,222,128,0.4);
+    }
+    .mid-pitch-btn  {
+      background: linear-gradient(160deg,#78350f,#92400e);
+      border-color: rgba(251,191,36,0.5); color: #fde68a;
+      box-shadow: 0 6px 22px rgba(0,0,0,0.4), 0 0 18px rgba(251,191,36,0.15);
+    }
+    .mid-pitch-btn:not(:disabled):hover {
+      border-color: rgba(251,191,36,0.9);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 28px rgba(251,191,36,0.4);
+    }
+    .high-pitch-btn {
+      background: linear-gradient(160deg,#7f1d1d,#991b1b);
+      border-color: rgba(248,113,113,0.5); color: #fecaca;
+      box-shadow: 0 6px 22px rgba(0,0,0,0.4), 0 0 18px rgba(248,113,113,0.15);
+    }
+    .high-pitch-btn:not(:disabled):hover {
+      border-color: rgba(248,113,113,0.9);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 28px rgba(248,113,113,0.4);
+    }
+
+    .pitch-btn-emoji { font-size: 1.8em; line-height: 1; transition: transform 0.15s; }
+    .pitch-btn:not(:disabled):hover .pitch-btn-emoji { transform: scale(1.25); }
+    .pitch-btn-label { font-size: 0.85em; font-weight: bold; letter-spacing: 0.06em; opacity: 0.9; }
+
+    .pitch-btn.pitch-correct {
+      background: linear-gradient(160deg,#14532d,#15803d) !important;
+      border-color: #4ade80 !important;
+      box-shadow: 0 0 36px rgba(74,222,128,0.7), 0 6px 22px rgba(0,0,0,0.45) !important;
+    }
+    .pitch-btn.shake { animation: shake 0.45s ease; }
+
+    @media (max-width: 480px) {
+      .hunter-char      { width: 82px; }
+      .hunters-lane     { height: 240px; }
+      .hunters-tap-btn  { min-height: 80px; font-size: 22px; }
+      .demon-creature   { width: 92px; height: 108px; }
+      .pitch-btn        { min-height: 76px; font-size: 14px; }
+      .pitch-btn-emoji  { font-size: 1.5em; }
+    }
+
+    /* ============================================================
+       17. COLOURS GAME
+       ============================================================ */
+    .colours-target {
+      text-align: center; padding: 22px 20px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 24px; border: 2px solid rgba(255,255,255,0.15);
+      width: 100%; max-width: 420px;
+    }
+    .colours-name-label {
+      font-size: clamp(13px, 3.2vw, 16px); color: rgba(255,255,255,0.65);
+      margin: 0 0 8px;
+    }
+    .colours-name {
+      font-size: clamp(44px, 11vw, 72px); font-weight: bold;
+      letter-spacing: 0.07em;
+      transition: color 0.3s ease;
+    }
+    .colours-grid {
+      display: flex; flex-wrap: wrap; gap: 16px;
+      justify-content: center; width: 100%; max-width: 440px; padding: 8px;
+    }
+    .colour-swatch {
+      width: 100px; height: 100px; border-radius: 50%;
+      border: 4px solid rgba(255,255,255,0.25);
+      cursor: pointer; touch-action: manipulation; font-family: inherit;
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+    }
+    .colour-swatch:hover  { transform: scale(1.12); border-color: rgba(255,255,255,0.8); box-shadow: 0 8px 32px rgba(0,0,0,0.45); }
+    .colour-swatch:active { transform: scale(0.91); }
+    @keyframes swatch-correct {
+      0%   { transform: scale(1); }
+      35%  { transform: scale(1.3); box-shadow: 0 0 50px 16px rgba(255,255,255,0.55); }
+      100% { transform: scale(1); }
+    }
+    .colour-swatch.swatch-correct { animation: swatch-correct 0.5s ease-out; border-color: white; }
+    .colour-swatch.shake { animation: shake 0.4s ease; }
+    @media (max-width: 480px) {
+      .colour-swatch { width: 78px; height: 78px; }
+    }
+
+    /* ============================================================
+       18. MEMORY MATCH GAME
+       3D card-flip pairs game.
+       ============================================================ */
+    #screen-memory-start .game-title { font-size: clamp(28px, 7vw, 52px); }
+
+    .memory-grid {
+      display: grid; gap: 12px;
+      width: 100%; padding: 8px;
+      justify-items: center; justify-content: center;
+    }
+    .memory-grid.grid-easy   { grid-template-columns: repeat(3, 88px); max-width: 320px; }
+    .memory-grid.grid-medium { grid-template-columns: repeat(4, 80px); max-width: 376px; }
+    .memory-grid.grid-hard   { grid-template-columns: repeat(4, 80px); max-width: 376px; }
+
+    /* 3D flip container */
+    .memory-card {
+      width: 88px; height: 88px;
+      perspective: 700px;
+      cursor: pointer; touch-action: manipulation;
+    }
+    .memory-grid.grid-medium .memory-card,
+    .memory-grid.grid-hard   .memory-card { width: 80px; height: 80px; }
+
+    .memory-card-inner {
+      width: 100%; height: 100%; position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.42s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 16px;
+    }
+    .memory-card.flipped .memory-card-inner,
+    .memory-card.matched  .memory-card-inner { transform: rotateY(180deg); }
+
+    .memory-card-back,
+    .memory-card-front {
+      position: absolute; inset: 0; border-radius: 16px;
+      backface-visibility: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    /* Face-down side */
+    .memory-card-back {
+      background: linear-gradient(135deg, #134e4a 0%, #1a5c57 100%);
+      border: 2px solid rgba(20,184,166,0.45);
+      font-size: 26px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.1);
+      transition: border-color 0.15s;
+    }
+    .memory-card:hover:not(.flipped):not(.matched) .memory-card-back {
+      border-color: rgba(20,184,166,0.9);
+      box-shadow: 0 6px 22px rgba(20,184,166,0.3), 0 4px 14px rgba(0,0,0,0.45);
+    }
+    /* Face-up side */
+    .memory-card-front {
+      background: linear-gradient(135deg, #0f2a28 0%, #1a3d3a 100%);
+      border: 2px solid rgba(255,255,255,0.18);
+      font-size: clamp(26px, 6vw, 38px);
+      transform: rotateY(180deg);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.45);
+    }
+    /* Matched: golden glow */
+    .memory-card.matched .memory-card-front {
+      border-color: #fde047;
+      background: linear-gradient(135deg, #1a2f0f 0%, #2d4a1a 100%);
+      box-shadow: 0 0 22px rgba(253,224,71,0.55), 0 4px 14px rgba(0,0,0,0.4);
+    }
+    @keyframes card-match-pop {
+      0%   { transform: rotateY(180deg) scale(1);    }
+      35%  { transform: rotateY(180deg) scale(1.22); }
+      70%  { transform: rotateY(180deg) scale(0.96); }
+      100% { transform: rotateY(180deg) scale(1);    }
+    }
+    .memory-card.matched .memory-card-inner {
+      animation: card-match-pop 0.45s ease-out forwards;
+    }
+    /* Wrong-flip shake on the card */
+    .memory-card.card-wrong .memory-card-inner { animation: shake 0.4s ease; }
+
+    @media (max-width: 480px) {
+      .memory-grid.grid-easy   { grid-template-columns: repeat(3, 76px); }
+      .memory-grid.grid-medium,
+      .memory-grid.grid-hard   { grid-template-columns: repeat(4, 68px); }
+      .memory-card              { width: 76px; height: 76px; }
+      .memory-grid.grid-medium .memory-card,
+      .memory-grid.grid-hard   .memory-card { width: 68px; height: 68px; }
+    }
+
+    /* ============================================================
        CONFETTI
-       Each piece is a small fixed-position div created by JS on
-       word completion and removed automatically after its animation.
-       `animation-duration` and `animation-delay` are set per-piece
-       via inline styles (inline > class specificity), which lets the
-       CSS here define just the name, easing, and fill-mode.
        ============================================================ */
     .confetti-piece {
       position: fixed;
       top: -16px;
       pointer-events: none;
-      z-index: 150;           /* above game content, below overlay (200) */
+      z-index: 150;
       animation: confetti-fall 2s linear forwards;
     }
 
     @keyframes confetti-fall {
-      0%  { transform: translateY(0)     translateX(0)                rotate(0deg);   opacity: 1; }
-      50% { transform: translateY(50vh)  translateX(var(--drift,30px)) rotate(360deg); }
+      0%  { transform: translateY(0)     translateX(0)                 rotate(0deg);   opacity: 1; }
+      50% { transform: translateY(50vh)  translateX(var(--drift,30px))  rotate(360deg); }
       90% { opacity: 1; }
-      100%{ transform: translateY(110vh) translateX(0)                rotate(720deg); opacity: 0; }
+      100%{ transform: translateY(110vh) translateX(0)                 rotate(720deg); opacity: 0; }
     }
   </style>
 </head>
@@ -533,68 +1509,523 @@
   <div id="app">
 
     <!-- ==========================================================
-         START SCREEN
+         HOME SCREEN
          ========================================================== -->
-    <div id="start-screen" class="screen">
+    <div id="screen-home" class="screen">
+      <h1 class="home-title">🌟 Fun Games! 🌟</h1>
+      <p class="home-subtitle">Tap a game to play!</p>
 
-      <h1 class="game-title">Spell It! 🌟</h1>
-      <p class="subtitle">Drag the letters to spell the word!</p>
-
-      <div class="level-select">
-        <!--
-          data-level is a custom HTML attribute. In JS we read it as
-          element.dataset.level — the browser automatically converts
-          `data-xyz` attributes to camelCase dataset properties.
-        -->
-        <button class="level-btn easy-btn" data-level="easy">
-          🌱 Easy
-          <span class="level-desc">3-letter words</span>
+      <div class="game-picker">
+        <button class="game-card" data-game="spelling" aria-label="Spelling game">
+          <span class="game-card-emoji">🔤</span>
+          <span class="game-card-name">Spelling</span>
         </button>
-        <button class="level-btn medium-btn" data-level="medium">
-          🌿 Medium
-          <span class="level-desc">4-letter words</span>
+        <button class="game-card" data-game="math" aria-label="Maths game">
+          <span class="game-card-emoji">➕</span>
+          <span class="game-card-name">Maths</span>
         </button>
-        <button class="level-btn hard-btn" data-level="hard">
-          🌳 Hard
-          <span class="level-desc">5–6 letter words</span>
+        <button class="game-card" data-game="reading" aria-label="Reading game">
+          <span class="game-card-emoji">📖</span>
+          <span class="game-card-name">Reading</span>
+        </button>
+        <button class="game-card" data-game="hunters" aria-label="Singing Hunters game">
+          <span class="game-card-emoji">🎤</span>
+          <span class="game-card-name">Singing Hunters</span>
+        </button>
+        <button class="game-card" data-game="colours" aria-label="Colours game">
+          <span class="game-card-emoji">🎨</span>
+          <span class="game-card-name">Colours</span>
+        </button>
+        <button class="game-card" data-game="memory" aria-label="Memory Match game">
+          <span class="game-card-emoji">🃏</span>
+          <span class="game-card-name">Memory</span>
         </button>
       </div>
-
-    </div><!-- end #start-screen -->
+    </div><!-- end #screen-home -->
 
 
     <!-- ==========================================================
-         GAME SCREEN
+         SPELLING — LEVEL SELECT
          ========================================================== -->
-    <div id="game-screen" class="screen hidden">
+    <div id="screen-spelling-start" class="screen hidden">
+      <button class="standalone-back" id="spelling-home-btn">← Home</button>
+      <h1 class="game-title">Spell It! 🌟</h1>
+      <p class="subtitle">Drag the letters to spell the word!</p>
+      <div class="game-level-grid">
+        <button class="game-level-card glv-easy" data-level="easy">
+          <span class="glv-icon">✏️</span>
+          <span class="glv-text">
+            <p class="glv-title">Easy — Short Words</p>
+            <p class="glv-desc">Simple 3-letter words like CAT and SUN</p>
+          </span>
+        </button>
+        <button class="game-level-card glv-medium" data-level="medium">
+          <span class="glv-icon">📝</span>
+          <span class="glv-text">
+            <p class="glv-title">Medium — Longer Words</p>
+            <p class="glv-desc">4-letter words like FISH and CAKE</p>
+          </span>
+        </button>
+        <button class="game-level-card glv-hard" data-level="hard">
+          <span class="glv-icon">🌟</span>
+          <span class="glv-text">
+            <p class="glv-title">Hard — Big Words</p>
+            <p class="glv-desc">5–6 letter words like APPLE and FLOWER</p>
+          </span>
+        </button>
+      </div>
+    </div><!-- end #screen-spelling-start -->
 
-      <!-- Header: back button | score | word counter -->
+
+    <!-- ==========================================================
+         SPELLING — GAME SCREEN
+         ========================================================== -->
+    <div id="screen-spelling-game" class="screen hidden">
       <div class="game-header">
-        <button id="back-btn" class="back-btn">← Menu</button>
+        <button id="back-btn" class="back-btn">← Levels</button>
         <div id="score-display" class="score-display">⭐ 0</div>
         <div id="word-progress" class="word-progress">Word 1 of 7</div>
       </div>
-
-      <!-- Emoji "picture clue" — JS sets this for each word -->
       <div id="emoji-display" class="emoji-display" aria-label="Picture clue"></div>
-
-      <!-- Tap to hear the word spoken aloud — primary iOS speech trigger -->
       <button id="speak-btn" class="speak-btn" aria-label="Hear the word">🔊 Hear it!</button>
-
       <p class="word-label">Spell this word!</p>
-
-      <!-- Empty letter slots — built by JS per word -->
       <div id="slots-area" class="slots-area" role="list" aria-label="Letter slots"></div>
-
-      <!-- Draggable letter tiles — built by JS per word -->
       <div id="tiles-area" class="tiles-area" role="list" aria-label="Letter tiles"></div>
+    </div><!-- end #screen-spelling-game -->
 
-    </div><!-- end #game-screen -->
 
     <!-- ==========================================================
-         WORD-COMPLETE OVERLAY
-         Shown briefly after each word is spelled correctly.
-         `position: fixed` in CSS makes it float above everything.
+         MATHS — LEVEL SELECT
+         ========================================================== -->
+    <div id="screen-math-start" class="screen hidden">
+      <button class="standalone-back" id="math-home-btn">← Home</button>
+      <h1 class="game-title">Maths! ➕</h1>
+      <p class="subtitle">Drag the number to finish the sum!</p>
+
+      <!--
+        data-math-level (not data-level) avoids triggering the
+        spelling level-select handler by mistake.
+      -->
+      <div class="game-level-grid">
+        <button class="game-level-card glv-easy" data-math-level="easy">
+          <span class="glv-icon">🌱</span>
+          <span class="glv-text">
+            <p class="glv-title">Easy — Adding Small Numbers</p>
+            <p class="glv-desc">Add numbers that go up to 5</p>
+          </span>
+        </button>
+        <button class="game-level-card glv-medium" data-math-level="medium">
+          <span class="glv-icon">🔢</span>
+          <span class="glv-text">
+            <p class="glv-title">Medium — Adding to 10</p>
+            <p class="glv-desc">Bigger additions up to 10</p>
+          </span>
+        </button>
+        <button class="game-level-card glv-hard" data-math-level="hard">
+          <span class="glv-icon">➖</span>
+          <span class="glv-text">
+            <p class="glv-title">Hard — Taking Away</p>
+            <p class="glv-desc">Subtraction with numbers up to 10</p>
+          </span>
+        </button>
+      </div>
+    </div><!-- end #screen-math-start -->
+
+
+    <!-- ==========================================================
+         MATHS — GAME SCREEN
+         Layout: header | equation card | speak button | number tiles
+         ========================================================== -->
+    <div id="screen-math-game" class="screen hidden">
+      <div class="game-header">
+        <button id="math-back-btn" class="back-btn">← Levels</button>
+        <div id="math-score" class="score-display">⭐ 0</div>
+        <div id="math-progress" class="word-progress">Sum 1 of 7</div>
+      </div>
+
+      <!--
+        The equation row: [left number] [operator] [SLOT] = [result]
+        JS fills #math-left, #math-op, #math-result each problem.
+        The child drags a number tile into #math-slot.
+      -->
+      <div class="math-equation" aria-label="Maths equation">
+        <span id="math-left"   class="eq-part"              aria-live="polite"></span>
+        <span id="math-op"     class="eq-part eq-operator"  aria-live="polite"></span>
+        <div  id="math-slot"   class="eq-slot"
+              role="region" aria-label="Drop the answer here"></div>
+        <span                  class="eq-part">=</span>
+        <span id="math-result" class="eq-part"              aria-live="polite"></span>
+      </div>
+
+      <button id="math-speak-btn" class="speak-btn" aria-label="Hear the sum">🔊 Hear it!</button>
+
+      <div id="math-tiles" class="math-tiles-area" role="list" aria-label="Number choices"></div>
+    </div><!-- end #screen-math-game -->
+
+
+    <!-- ==========================================================
+         READING — LEVEL SELECT
+         ========================================================== -->
+    <div id="screen-reading-start" class="screen hidden">
+      <button class="standalone-back" id="reading-home-btn">← Home</button>
+      <h1 class="game-title">Reading! 📖</h1>
+      <p class="subtitle">Read the story and answer the question!</p>
+      <div class="game-level-grid">
+        <button class="game-level-card glv-easy" data-reading-level="easy">
+          <span class="glv-icon">🐱</span>
+          <span class="glv-text">
+            <p class="glv-title">Easy — Simple Sentences</p>
+            <p class="glv-desc">Short story, pick from 2 answers</p>
+          </span>
+        </button>
+        <button class="game-level-card glv-medium" data-reading-level="medium">
+          <span class="glv-icon">📚</span>
+          <span class="glv-text">
+            <p class="glv-title">Medium — Longer Stories</p>
+            <p class="glv-desc">A sentence story, pick from 3 answers</p>
+          </span>
+        </button>
+        <button class="game-level-card glv-hard" data-reading-level="hard">
+          <span class="glv-icon">🌟</span>
+          <span class="glv-text">
+            <p class="glv-title">Hard — Two Sentences</p>
+            <p class="glv-desc">Longer story, pick the right answer</p>
+          </span>
+        </button>
+      </div>
+    </div><!-- end #screen-reading-start -->
+
+
+    <!-- ==========================================================
+         READING — GAME SCREEN
+         Layout:  header | story card | question | answer buttons
+         ========================================================== -->
+    <div id="screen-reading-game" class="screen hidden">
+
+      <div class="game-header">
+        <button id="reading-back-btn" class="back-btn">← Levels</button>
+        <div id="reading-score"    class="score-display">⭐ 0</div>
+        <div id="reading-progress" class="word-progress">Story 1 of 5</div>
+      </div>
+
+      <!--
+        Story card: emoji picture clue + 1-2 sentence story text
+        + a speak button. JS fills the content for each story.
+      -->
+      <div class="reading-story-card">
+        <div id="reading-emoji" class="reading-emoji" aria-hidden="true"></div>
+        <p   id="reading-text"  class="reading-text"  aria-live="polite"></p>
+        <button id="reading-speak-story" class="speak-btn" aria-label="Hear the story">
+          🔊 Hear the story
+        </button>
+      </div>
+
+      <!-- Question + its own speak button -->
+      <div class="reading-question-area">
+        <p id="reading-question" class="reading-question" aria-live="polite"></p>
+        <button id="reading-speak-question" class="speak-btn" aria-label="Hear the question">
+          🔊 Hear the question
+        </button>
+      </div>
+
+      <!--
+        Answer buttons built by JS for each story.
+        Tapping a button speaks the choice aloud, then
+        evaluates correct/wrong — no separate 🔊 icon needed.
+      -->
+      <div id="reading-answers" class="reading-answers"
+           role="list" aria-label="Answer choices"></div>
+
+    </div><!-- end #screen-reading-game -->
+
+
+    <!-- ==========================================================
+         SINGING HUNTERS — LEVEL SELECT
+         ========================================================== -->
+    <div id="screen-hunters-start" class="screen hidden">
+      <button class="standalone-back hunters-back" id="hunters-home-btn">← Home</button>
+
+      <h1 class="game-title">🎤 Singing Hunters!</h1>
+      <p class="subtitle">Yuna &amp; Juno hunt shadow demons with music!</p>
+
+      <!-- Mini character art row -->
+      <div style="display:flex;justify-content:center;gap:36px;margin:0 0 6px;filter:drop-shadow(0 0 14px rgba(192,132,252,0.5))">
+        <svg viewBox="0 0 80 110" width="68" height="96" aria-hidden="true">
+          <!-- Yuna hair bun -->
+          <ellipse cx="40" cy="8" rx="10" ry="9" fill="#6d28d9"/>
+          <circle cx="40" cy="8" r="7" fill="#8b5cf6"/>
+          <!-- Head -->
+          <circle cx="40" cy="24" r="17" fill="#a78bfa"/>
+          <!-- Face -->
+          <circle cx="34" cy="22" r="2.8" fill="#1e0050"/>
+          <circle cx="46" cy="22" r="2.8" fill="#1e0050"/>
+          <circle cx="33" cy="21" r="1"   fill="white"/>
+          <circle cx="45" cy="21" r="1"   fill="white"/>
+          <path d="M35 29 Q40 35 45 29" fill="none" stroke="#1e0050" stroke-width="2" stroke-linecap="round"/>
+          <!-- Stage outfit: ruffled skirt idol dress -->
+          <path d="M27 38 Q40 32 53 38 L58 72 Q40 80 22 72 Z" fill="#7c3aed"/>
+          <path d="M22 72 Q40 82 58 72 L60 80 Q40 90 20 80 Z" fill="#5b21b6"/>
+          <!-- Star badge -->
+          <polygon points="40,44 42,49 47,49 43,52 44,57 40,54 36,57 37,52 33,49 38,49" fill="#fde047"/>
+          <!-- Arms -->
+          <line x1="27" y1="44" x2="10" y2="38" stroke="#a78bfa" stroke-width="6" stroke-linecap="round"/>
+          <line x1="53" y1="44" x2="70" y2="38" stroke="#a78bfa" stroke-width="6" stroke-linecap="round"/>
+          <!-- Mic -->
+          <rect x="68" y="30" width="7" height="13" rx="3.5" fill="#fde047"/>
+          <rect x="67" y="28" width="9"  height="5"  rx="4.5" fill="#fbbf24"/>
+        </svg>
+        <svg viewBox="0 0 80 110" width="68" height="96" aria-hidden="true">
+          <!-- Juno spiky hair -->
+          <polygon points="24,18 20,2 32,12 40,0 48,12 60,2 56,18" fill="#c2410c"/>
+          <!-- Head -->
+          <circle cx="40" cy="26" r="17" fill="#fb923c"/>
+          <!-- Face -->
+          <circle cx="34" cy="24" r="2.8" fill="#431407"/>
+          <circle cx="46" cy="24" r="2.8" fill="#431407"/>
+          <circle cx="33" cy="23" r="1"   fill="white"/>
+          <circle cx="45" cy="23" r="1"   fill="white"/>
+          <path d="M35 31 Q40 37 45 31" fill="none" stroke="#431407" stroke-width="2" stroke-linecap="round"/>
+          <!-- Diamond idol jacket -->
+          <path d="M27 42 Q40 36 53 42 L56 74 Q40 82 24 74 Z" fill="#ea580c"/>
+          <polygon points="40,47 52,62 40,77 28,62" fill="#c2410c" opacity="0.6"/>
+          <!-- Diamond badge -->
+          <polygon points="40,48 46,56 40,64 34,56" fill="#fde047"/>
+          <!-- Arms -->
+          <line x1="27" y1="48" x2="10" y2="40" stroke="#fb923c" stroke-width="6" stroke-linecap="round"/>
+          <line x1="53" y1="48" x2="70" y2="40" stroke="#fb923c" stroke-width="6" stroke-linecap="round"/>
+          <!-- Mic -->
+          <rect x="1"  y="32" width="7"  height="13" rx="3.5" fill="#fde047"/>
+          <rect x="0"  y="30" width="9"  height="5"  rx="4.5" fill="#fbbf24"/>
+        </svg>
+      </div>
+
+      <div class="hunters-level-grid">
+        <button class="hunters-level-card easy-card" data-hunters-level="easy">
+          <span class="hunters-card-icon">🎵</span>
+          <span class="hunters-card-text">
+            <p class="hunters-card-title">Easy — Match the Note</p>
+            <p class="hunters-card-desc">Listen to the demon sing, then pick Low, Medium or High!</p>
+          </span>
+        </button>
+        <button class="hunters-level-card medium-card" data-hunters-level="medium">
+          <span class="hunters-card-icon">🥁</span>
+          <span class="hunters-card-text">
+            <p class="hunters-card-title">Medium — Keep the Beat</p>
+            <p class="hunters-card-desc">Tap the notes before they fall off the stage!</p>
+          </span>
+        </button>
+        <button class="hunters-level-card hard-card" data-hunters-level="hard">
+          <span class="hunters-card-icon">🔥</span>
+          <span class="hunters-card-text">
+            <p class="hunters-card-title">Hard — Rhythm + Boss Battle</p>
+            <p class="hunters-card-desc">Survive the beat, then face the demon boss!</p>
+          </span>
+        </button>
+      </div>
+    </div><!-- end #screen-hunters-start -->
+
+
+    <!-- ==========================================================
+         SINGING HUNTERS — GAME SCREEN
+         ========================================================== -->
+    <div id="screen-hunters-game" class="screen hidden">
+
+      <div class="game-header">
+        <button id="hunters-back-btn" class="back-btn">← Levels</button>
+        <div id="hunters-score"    class="score-display">⭐ 0</div>
+        <div id="hunters-progress" class="word-progress">Demon 1 of 5</div>
+      </div>
+
+      <!-- Concert stage -->
+      <div class="hunters-stage">
+
+        <!-- Yuna: purple idol hunter -->
+        <div class="hunter-char" id="hunter-yuna" aria-hidden="true">
+          <svg viewBox="0 0 80 120" width="100" height="120">
+            <ellipse cx="40" cy="9"  rx="11" ry="10" fill="#6d28d9"/>
+            <circle  cx="40" cy="9"  r="8"  fill="#8b5cf6"/>
+            <circle  cx="40" cy="26" r="18" fill="#a78bfa"/>
+            <circle  cx="34" cy="24" r="3"  fill="#1e0050"/>
+            <circle  cx="46" cy="24" r="3"  fill="#1e0050"/>
+            <circle  cx="33" cy="23" r="1.1" fill="white"/>
+            <circle  cx="45" cy="23" r="1.1" fill="white"/>
+            <path d="M35 31 Q40 37 45 31" fill="none" stroke="#1e0050" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M26 41 Q40 35 54 41 L60 80 Q40 90 20 80 Z" fill="#7c3aed"/>
+            <path d="M20 80 Q40 92 60 80 L62 90 Q40 102 18 90 Z" fill="#5b21b6"/>
+            <polygon points="40,48 43,55 50,55 44,59 46,66 40,62 34,66 36,59 30,55 37,55" fill="#fde047"/>
+            <line x1="26" y1="48" x2="6"  y2="40" stroke="#a78bfa" stroke-width="6" stroke-linecap="round"/>
+            <line x1="54" y1="48" x2="74" y2="40" stroke="#a78bfa" stroke-width="6" stroke-linecap="round"/>
+            <rect x="72" y="32" width="7" height="14" rx="3.5" fill="#fde047"/>
+            <rect x="71" y="30" width="9" height="6"  rx="4.5" fill="#fbbf24"/>
+          </svg>
+        </div>
+
+        <!-- Swappable centre: rhythm lane OR demon arena -->
+        <div id="hunters-lane-wrap" class="hunters-center hidden">
+          <div class="hunters-lane" id="hunters-lane">
+            <div class="hunters-tap-zone" id="hunters-tap-zone"></div>
+          </div>
+        </div>
+
+        <div id="hunters-demon-wrap" class="hunters-center hidden">
+          <div class="demon-arena" id="demon-arena">
+            <div id="hunters-pitch-label"></div>
+          </div>
+        </div>
+
+        <!-- Juno: orange idol hunter -->
+        <div class="hunter-char" id="hunter-juno" aria-hidden="true">
+          <svg viewBox="0 0 80 120" width="100" height="120">
+            <polygon points="22,20 18,3 31,14 40,1 49,14 62,3 58,20" fill="#c2410c"/>
+            <circle  cx="40" cy="28" r="18" fill="#fb923c"/>
+            <circle  cx="34" cy="26" r="3"  fill="#431407"/>
+            <circle  cx="46" cy="26" r="3"  fill="#431407"/>
+            <circle  cx="33" cy="25" r="1.1" fill="white"/>
+            <circle  cx="45" cy="25" r="1.1" fill="white"/>
+            <path d="M35 33 Q40 39 45 33" fill="none" stroke="#431407" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M26 43 Q40 37 54 43 L58 80 Q40 90 22 80 Z" fill="#ea580c"/>
+            <polygon points="40,50 53,65 40,80 27,65" fill="#c2410c" opacity="0.55"/>
+            <polygon points="40,52 46,60 40,68 34,60" fill="#fde047"/>
+            <line x1="26" y1="50" x2="6"  y2="40" stroke="#fb923c" stroke-width="6" stroke-linecap="round"/>
+            <line x1="54" y1="50" x2="74" y2="40" stroke="#fb923c" stroke-width="6" stroke-linecap="round"/>
+            <rect x="1"  y="32" width="7"  height="14" rx="3.5" fill="#fde047"/>
+            <rect x="0"  y="30" width="9"  height="6"  rx="4.5" fill="#fbbf24"/>
+          </svg>
+        </div>
+
+      </div><!-- end .hunters-stage -->
+
+      <!-- Rhythm mode controls -->
+      <div id="hunters-rhythm-controls" class="hidden">
+        <div class="hunters-shadows" id="hunters-shadows" aria-hidden="true"></div>
+        <button class="hunters-tap-btn" id="hunters-tap-btn"
+                aria-label="Tap when the note reaches the glowing zone">
+          🎤 TAP!
+        </button>
+      </div>
+
+      <!-- Pitch battle controls -->
+      <div id="hunters-pitch-controls" class="hidden">
+        <p id="hunters-pitch-instruction">
+          Tap each button to hear the sound — which matches the demon?
+        </p>
+        <div class="pitch-buttons">
+          <button class="pitch-btn low-pitch-btn"  data-pitch="low"  aria-label="Low note">
+            <span class="pitch-btn-emoji">🔉</span>
+            <span class="pitch-btn-label">LOW</span>
+          </button>
+          <button class="pitch-btn mid-pitch-btn"  data-pitch="mid"  aria-label="Medium note">
+            <span class="pitch-btn-emoji">🔊</span>
+            <span class="pitch-btn-label">MEDIUM</span>
+          </button>
+          <button class="pitch-btn high-pitch-btn" data-pitch="high" aria-label="High note">
+            <span class="pitch-btn-emoji">📢</span>
+            <span class="pitch-btn-label">HIGH</span>
+          </button>
+        </div>
+      </div>
+
+    </div><!-- end #screen-hunters-game -->
+
+
+    <!-- ==========================================================
+         COLOURS — LEVEL SELECT
+         ========================================================== -->
+    <div id="screen-colours-start" class="screen hidden">
+      <button class="standalone-back" id="colours-home-btn">← Home</button>
+      <h1 class="game-title">🎨 Colours!</h1>
+      <p class="subtitle">Tap the colour that matches the name!</p>
+      <div class="game-level-grid">
+        <button class="game-level-card glv-easy" data-colours-level="easy">
+          <span class="glv-icon">🟢</span>
+          <span class="glv-text">
+            <p class="glv-title">Easy — 4 Colours</p>
+            <p class="glv-desc">Red, Blue, Green and Yellow</p>
+          </span>
+        </button>
+        <button class="game-level-card glv-medium" data-colours-level="medium">
+          <span class="glv-icon">🟡</span>
+          <span class="glv-text">
+            <p class="glv-title">Medium — 6 Colours</p>
+            <p class="glv-desc">Add Purple and Orange to the mix!</p>
+          </span>
+        </button>
+        <button class="game-level-card glv-hard" data-colours-level="hard">
+          <span class="glv-icon">🔴</span>
+          <span class="glv-text">
+            <p class="glv-title">Hard — 8 Colours</p>
+            <p class="glv-desc">Pink and White join the challenge!</p>
+          </span>
+        </button>
+      </div>
+    </div><!-- end #screen-colours-start -->
+
+
+    <!-- ==========================================================
+         COLOURS — GAME SCREEN
+         ========================================================== -->
+    <div id="screen-colours-game" class="screen hidden">
+      <div class="game-header">
+        <button id="colours-back-btn" class="back-btn">← Levels</button>
+        <div id="colours-score"    class="score-display">⭐ 0</div>
+        <div id="colours-progress" class="word-progress">1 of 7</div>
+      </div>
+      <div id="colours-target" class="colours-target">
+        <p class="colours-name-label">Tap the colour:</p>
+        <p id="colours-name" class="colours-name">RED</p>
+      </div>
+      <div id="colours-grid" class="colours-grid"></div>
+    </div><!-- end #screen-colours-game -->
+
+
+    <!-- ==========================================================
+         MEMORY MATCH — LEVEL SELECT
+         ========================================================== -->
+    <div id="screen-memory-start" class="screen hidden">
+      <button class="standalone-back" id="memory-home-btn">← Home</button>
+      <h1 class="game-title">🃏 Memory!</h1>
+      <p class="subtitle">Flip cards to find matching pairs!</p>
+      <div class="game-level-grid">
+        <button class="game-level-card glv-easy" data-memory-level="easy">
+          <span class="glv-icon">🐱</span>
+          <span class="glv-text">
+            <p class="glv-title">Easy — 6 Cards</p>
+            <p class="glv-desc">3 pairs to find — a great start!</p>
+          </span>
+        </button>
+        <button class="game-level-card glv-medium" data-memory-level="medium">
+          <span class="glv-icon">🦊</span>
+          <span class="glv-text">
+            <p class="glv-title">Medium — 12 Cards</p>
+            <p class="glv-desc">6 pairs — remember more!</p>
+          </span>
+        </button>
+        <button class="game-level-card glv-hard" data-memory-level="hard">
+          <span class="glv-icon">🌟</span>
+          <span class="glv-text">
+            <p class="glv-title">Hard — 16 Cards</p>
+            <p class="glv-desc">8 pairs — the ultimate memory test!</p>
+          </span>
+        </button>
+      </div>
+    </div><!-- end #screen-memory-start -->
+
+
+    <!-- ==========================================================
+         MEMORY MATCH — GAME SCREEN
+         ========================================================== -->
+    <div id="screen-memory-game" class="screen hidden">
+      <div class="game-header">
+        <button id="memory-back-btn" class="back-btn">← Levels</button>
+        <div id="memory-score"    class="score-display">⭐ 0</div>
+        <div id="memory-progress" class="word-progress">0 / 3 pairs</div>
+      </div>
+      <div id="memory-grid" class="memory-grid grid-easy"></div>
+    </div><!-- end #screen-memory-game -->
+
+
+    <!-- ==========================================================
+         WORD-COMPLETE OVERLAY (shared — floats above any game)
          ========================================================== -->
     <div id="word-overlay" class="word-overlay hidden" aria-live="polite">
       <div class="word-overlay-card">
@@ -603,317 +2034,714 @@
       </div>
     </div>
 
-    <!-- ==========================================================
-         END SCREEN
-         Shown after all words in the session have been played.
-         ========================================================== -->
-    <div id="end-screen" class="screen hidden">
-      <div class="end-title">🎉 All Done! 🎉</div>
 
+    <!-- ==========================================================
+         END SCREEN (shared across all games)
+         "Play Again" re-starts whichever game was just played.
+         ========================================================== -->
+    <div id="screen-end" class="screen hidden">
+      <div class="end-title">🎉 All Done! 🎉</div>
       <div class="end-card">
         <div class="end-label">Your Stars</div>
         <div id="end-star-count" class="end-star-count">⭐ 0</div>
         <div id="end-max-text"   class="end-max-text">out of 21</div>
       </div>
-
       <div class="end-buttons">
         <button id="play-again-btn"   class="level-btn easy-btn">
           🔄 Play Again
           <span class="level-desc">same level</span>
         </button>
         <button id="change-level-btn" class="level-btn medium-btn">
-          🏠 Menu
-          <span class="level-desc">pick a level</span>
+          🏠 Home
+          <span class="level-desc">pick a game</span>
         </button>
       </div>
-    </div><!-- end #end-screen -->
+    </div><!-- end #screen-end -->
+
+    <div id="toast" class="toast" aria-live="polite" role="status"></div>
 
   </div><!-- end #app -->
 
   <script>
     /* ==========================================================
-       WORD LIST
-       ──────────────────────────────────────────────────────────
-       This is the only place you need to edit to add new words.
-       Format: { word: "cat", emoji: "🐱" }
+       ╔══════════════════════════════════════════════════════════╗
+       ║  SECTION A — CONFIG                                      ║
+       ║  Edit content here without touching game logic below.    ║
+       ╚══════════════════════════════════════════════════════════╝
        ========================================================== */
+
+    /* ── Spelling word lists ─────────────────────────────────── */
     const WORDS = {
       easy: [
-        { word: "cat",  emoji: "🐱" },
-        { word: "dog",  emoji: "🐶" },
-        { word: "sun",  emoji: "☀️" },
-        { word: "hat",  emoji: "🎩" },
-        { word: "bug",  emoji: "🐛" },
-        { word: "cow",  emoji: "🐄" },
-        { word: "hen",  emoji: "🐔" },
+        { word: "cat",  emoji: "🐱" }, { word: "dog",  emoji: "🐶" },
+        { word: "sun",  emoji: "☀️" }, { word: "hat",  emoji: "🎩" },
+        { word: "bug",  emoji: "🐛" }, { word: "cow",  emoji: "🐄" },
+        { word: "hen",  emoji: "🐔" }, { word: "pig",  emoji: "🐷" },
+        { word: "cup",  emoji: "☕" }, { word: "bat",  emoji: "🦇" },
+        { word: "map",  emoji: "🗺️" }, { word: "jam",  emoji: "🍓" },
       ],
       medium: [
-        { word: "fish", emoji: "🐟" },
-        { word: "tree", emoji: "🌳" },
-        { word: "bird", emoji: "🐦" },
-        { word: "frog", emoji: "🐸" },
-        { word: "cake", emoji: "🎂" },
-        { word: "bear", emoji: "🐻" },
-        { word: "duck", emoji: "🦆" },
+        { word: "fish", emoji: "🐟" }, { word: "tree", emoji: "🌳" },
+        { word: "bird", emoji: "🐦" }, { word: "frog", emoji: "🐸" },
+        { word: "cake", emoji: "🎂" }, { word: "bear", emoji: "🐻" },
+        { word: "duck", emoji: "🦆" }, { word: "rain", emoji: "🌧️" },
+        { word: "moon", emoji: "🌙" }, { word: "star", emoji: "⭐" },
+        { word: "boat", emoji: "⛵" }, { word: "king", emoji: "👑" },
       ],
       hard: [
-        { word: "apple",  emoji: "🍎" },
-        { word: "tiger",  emoji: "🐯" },
-        { word: "train",  emoji: "🚂" },
-        { word: "cloud",  emoji: "☁️" },
-        { word: "snake",  emoji: "🐍" },
-        { word: "flower", emoji: "🌸" },
-        { word: "rabbit", emoji: "🐰" },
+        { word: "apple",  emoji: "🍎" }, { word: "tiger",  emoji: "🐯" },
+        { word: "train",  emoji: "🚂" }, { word: "cloud",  emoji: "☁️" },
+        { word: "snake",  emoji: "🐍" }, { word: "flower", emoji: "🌸" },
+        { word: "rabbit", emoji: "🐰" }, { word: "piano",  emoji: "🎹" },
+        { word: "crown",  emoji: "👑" }, { word: "shark",  emoji: "🦈" },
+        { word: "storm",  emoji: "⛈️" }, { word: "globe",  emoji: "🌍" },
       ],
     };
 
+    /*
+      ── Math problem sets ──────────────────────────────────────
+      Each problem is  { a, op, result }  where the child must find
+      the missing number:   a  op  ?  =  result
+        op "+"  →  answer = result − a   (addition)
+        op "−"  →  answer = a − result   (subtraction)
+      All answers are non-negative integers within the level range.
+    */
+    const MATH_PROBLEMS = {
+      easy: [
+        { a: 1, op: "+", result: 2 }, { a: 2, op: "+", result: 3 },
+        { a: 1, op: "+", result: 3 }, { a: 2, op: "+", result: 4 },
+        { a: 3, op: "+", result: 5 }, { a: 1, op: "+", result: 4 },
+        { a: 2, op: "+", result: 5 }, { a: 1, op: "+", result: 5 },
+        { a: 3, op: "+", result: 4 }, { a: 2, op: "+", result: 5 },
+      ],
+      medium: [
+        { a: 3, op: "+", result: 7  }, { a: 4, op: "+", result: 9  },
+        { a: 5, op: "+", result: 8  }, { a: 6, op: "+", result: 10 },
+        { a: 2, op: "+", result: 8  }, { a: 3, op: "+", result: 9  },
+        { a: 4, op: "+", result: 8  }, { a: 5, op: "+", result: 10 },
+        { a: 1, op: "+", result: 7  }, { a: 4, op: "+", result: 7  },
+      ],
+      hard: [
+        { a: 5,  op: "-", result: 2 }, { a: 7,  op: "-", result: 3 },
+        { a: 8,  op: "-", result: 5 }, { a: 9,  op: "-", result: 4 },
+        { a: 10, op: "-", result: 6 }, { a: 6,  op: "-", result: 2 },
+        { a: 8,  op: "-", result: 3 }, { a: 9,  op: "-", result: 5 },
+        { a: 10, op: "-", result: 7 }, { a: 7,  op: "-", result: 4 },
+      ],
+    };
+
+    /* Number words for speech ("3" → "three") — index = digit */
+    const NUM_WORDS = [
+      "zero","one","two","three","four","five",
+      "six","seven","eight","nine","ten"
+    ];
+
+    /* Highest valid answer per math difficulty level */
+    const MATH_MAX_RANGE = { easy: 5, medium: 10, hard: 10 };
+
+    /*
+      ── Reading story sets ─────────────────────────────────────
+      Each entry: { text, emoji, question, answers[] }
+        text      — the story sentence(s) displayed and spoken
+        emoji     — big picture clue shown above the text
+        question  — the comprehension question in gold
+        answers[] — { text, emoji, correct }
+                    shuffle() randomises button order each play
+      Easy:   2 choices, 1 sentence
+      Medium: 3 choices, 1 sentence (more detail)
+      Hard:   3 choices, 2 sentences
+    */
+    const STORIES = {
+      easy: [
+        {
+          text:     "The cat is on the mat.",
+          emoji:    "🐱",
+          question: "Where is the cat?",
+          answers: [
+            { text: "on the mat",  emoji: "🛋️", correct: true  },
+            { text: "in the tree", emoji: "🌳", correct: false },
+          ],
+        },
+        {
+          text:     "The dog is sleeping.",
+          emoji:    "🐶",
+          question: "What is the dog doing?",
+          answers: [
+            { text: "sleeping", emoji: "😴", correct: true  },
+            { text: "running",  emoji: "🏃", correct: false },
+          ],
+        },
+        {
+          text:     "The bird is in the nest.",
+          emoji:    "🐦",
+          question: "Where is the bird?",
+          answers: [
+            { text: "in the nest",  emoji: "🪺", correct: true  },
+            { text: "in the water", emoji: "🌊", correct: false },
+          ],
+        },
+        {
+          text:     "The sun is yellow.",
+          emoji:    "☀️",
+          question: "What colour is the sun?",
+          answers: [
+            { text: "yellow", emoji: "💛", correct: true  },
+            { text: "blue",   emoji: "💙", correct: false },
+          ],
+        },
+        {
+          text:     "The frog jumped into the pond.",
+          emoji:    "🐸",
+          question: "Where did the frog jump?",
+          answers: [
+            { text: "into the pond", emoji: "💧", correct: true  },
+            { text: "up a tree",     emoji: "🌲", correct: false },
+          ],
+        },
+        {
+          text:     "The dog ran in the park.",
+          emoji:    "🐶",
+          question: "Where did the dog run?",
+          answers: [
+            { text: "In the park",  emoji: "🌳", correct: true  },
+            { text: "In the house", emoji: "🏠", correct: false },
+          ],
+        },
+        {
+          text:     "The bee lands on a flower.",
+          emoji:    "🐝",
+          question: "What does the bee land on?",
+          answers: [
+            { text: "A flower", emoji: "🌸", correct: true  },
+            { text: "A tree",   emoji: "🌳", correct: false },
+          ],
+        },
+        {
+          text:     "The baby is sleeping.",
+          emoji:    "👶",
+          question: "What is the baby doing?",
+          answers: [
+            { text: "Sleeping", emoji: "😴", correct: true  },
+            { text: "Eating",   emoji: "🍼", correct: false },
+          ],
+        },
+      ],
+      medium: [
+        {
+          text:     "The red apple fell from the tree.",
+          emoji:    "🍎",
+          question: "What happened to the apple?",
+          answers: [
+            { text: "it fell down",  emoji: "🍂", correct: true  },
+            { text: "it got bigger", emoji: "🍏", correct: false },
+            { text: "it flew away",  emoji: "🕊️", correct: false },
+          ],
+        },
+        {
+          text:     "The bear ate honey for breakfast.",
+          emoji:    "🐻",
+          question: "What did the bear eat?",
+          answers: [
+            { text: "honey",   emoji: "🍯", correct: true  },
+            { text: "fish",    emoji: "🐟", correct: false },
+            { text: "berries", emoji: "🫐", correct: false },
+          ],
+        },
+        {
+          text:     "The rabbit hid under the big bush.",
+          emoji:    "🐰",
+          question: "Where did the rabbit hide?",
+          answers: [
+            { text: "under the bush", emoji: "🌿", correct: true  },
+            { text: "in a hole",      emoji: "🕳️", correct: false },
+            { text: "up a tree",      emoji: "🌳", correct: false },
+          ],
+        },
+        {
+          text:     "It was raining so the duck went outside.",
+          emoji:    "🦆",
+          question: "What was the weather?",
+          answers: [
+            { text: "rainy", emoji: "🌧️", correct: true  },
+            { text: "sunny", emoji: "☀️", correct: false },
+            { text: "snowy", emoji: "❄️", correct: false },
+          ],
+        },
+        {
+          text:     "The little fish swam to the big rock.",
+          emoji:    "🐟",
+          question: "Where did the fish swim?",
+          answers: [
+            { text: "to the rock",  emoji: "🪨", correct: true  },
+            { text: "to the boat",  emoji: "⛵", correct: false },
+            { text: "to the shore", emoji: "🏖️", correct: false },
+          ],
+        },
+        {
+          text:     "The puppy chased its tail around and around.",
+          emoji:    "🐶",
+          question: "What did the puppy chase?",
+          answers: [
+            { text: "Its tail", emoji: "🐕", correct: true  },
+            { text: "A ball",   emoji: "⚽", correct: false },
+            { text: "A cat",    emoji: "🐱", correct: false },
+          ],
+        },
+        {
+          text:     "The girl drew a rainbow with her crayons.",
+          emoji:    "🌈",
+          question: "What did the girl draw?",
+          answers: [
+            { text: "A house",   emoji: "🏠", correct: false },
+            { text: "A rainbow", emoji: "🌈", correct: true  },
+            { text: "A sun",     emoji: "☀️", correct: false },
+          ],
+        },
+        {
+          text:     "The monkey swung from tree to tree.",
+          emoji:    "🐒",
+          question: "What did the monkey swing from?",
+          answers: [
+            { text: "Rope",         emoji: "🪢", correct: false },
+            { text: "Tree to tree", emoji: "🌳", correct: true  },
+            { text: "A vine",       emoji: "🌿", correct: false },
+          ],
+        },
+      ],
+      hard: [
+        {
+          text:     "Lily had a red kite. She flew it up into the sky.",
+          emoji:    "🪁",
+          question: "What colour was the kite?",
+          answers: [
+            { text: "red",   emoji: "❤️", correct: true  },
+            { text: "blue",  emoji: "💙", correct: false },
+            { text: "green", emoji: "💚", correct: false },
+          ],
+        },
+        {
+          text:     "Max found a small turtle by the river. He took it home to keep it safe.",
+          emoji:    "🐢",
+          question: "Where did Max find the turtle?",
+          answers: [
+            { text: "by the river",  emoji: "🌊", correct: true  },
+            { text: "in the garden", emoji: "🌻", correct: false },
+            { text: "on the road",   emoji: "🛣️", correct: false },
+          ],
+        },
+        {
+          text:     "The owl slept all day. At night it flew through the dark forest.",
+          emoji:    "🦉",
+          question: "When did the owl fly?",
+          answers: [
+            { text: "at night",       emoji: "🌙", correct: true  },
+            { text: "in the morning", emoji: "🌅", correct: false },
+            { text: "at lunchtime",   emoji: "🕛", correct: false },
+          ],
+        },
+        {
+          text:     "Sam made a snowman in the garden. He gave it a carrot nose.",
+          emoji:    "⛄",
+          question: "What was the snowman's nose made of?",
+          answers: [
+            { text: "a carrot", emoji: "🥕", correct: true  },
+            { text: "a button", emoji: "🔘", correct: false },
+            { text: "a stick",  emoji: "🪵", correct: false },
+          ],
+        },
+        {
+          text:     "The princess found a golden egg in the old chest. She kept it as her treasure.",
+          emoji:    "🥚",
+          question: "What did the princess find?",
+          answers: [
+            { text: "a golden egg",   emoji: "🥚", correct: true  },
+            { text: "a golden crown", emoji: "👑", correct: false },
+            { text: "a golden ring",  emoji: "💍", correct: false },
+          ],
+        },
+        {
+          text:     "Tom went to the beach with his mum. They built a big sandcastle together.",
+          emoji:    "🏖️",
+          question: "What did Tom build?",
+          answers: [
+            { text: "A boat",       emoji: "⛵", correct: false },
+            { text: "A sandcastle", emoji: "🏰", correct: true  },
+            { text: "A tent",       emoji: "⛺", correct: false },
+          ],
+        },
+        {
+          text:     "The kitten heard a loud noise. It hid behind the sofa.",
+          emoji:    "🐱",
+          question: "Where did the kitten hide?",
+          answers: [
+            { text: "Under the bed",   emoji: "🛏️", correct: false },
+            { text: "Behind the sofa", emoji: "🛋️", correct: true  },
+            { text: "In the garden",   emoji: "🌻", correct: false },
+          ],
+        },
+        {
+          text:     "Rosa planted seeds in her garden. One week later, tiny flowers grew.",
+          emoji:    "🌱",
+          question: "What grew from the seeds?",
+          answers: [
+            { text: "Trees",        emoji: "🌳", correct: false },
+            { text: "Tiny flowers", emoji: "🌸", correct: true  },
+            { text: "Big leaves",   emoji: "🍃", correct: false },
+          ],
+        },
+      ],
+    };
+
+
     /* ==========================================================
-       STATE
-       ──────────────────────────────────────────────────────────
-       One object holds everything about the current session.
-       `const` in JS means the variable name can't be reassigned,
-       but the object's *contents* can change — just like a Python
-       dict assigned to a variable.
+       ╔══════════════════════════════════════════════════════════╗
+       ║  SECTION B — STATE                                       ║
+       ╚══════════════════════════════════════════════════════════╝
        ========================================================== */
+
+    /*
+      Spelling session state.
+      `const` means the variable can't be re-assigned; the object's
+      *contents* can change — like a Python dict stored in a variable.
+    */
     const state = {
-      level:       null,  // "easy" | "medium" | "hard"
-      wordList:    [],    // shuffled copy of the chosen level's array
-      wordIndex:   0,     // which word we're on (0-based index)
-      currentWord: null,  // { word, emoji }
-      filledSlots: [],    // array of letter|null for each slot position
-      mistakes:    0,     // wrong drops on the current word
-      totalStars:  0,     // stars earned across all words this session
+      level:       null,
+      wordList:    [],
+      wordIndex:   0,
+      currentWord: null,
+      filledSlots: [],
+      mistakes:    0,
+      totalStars:  0,
     };
 
-    /* ==========================================================
-       DRAG STATE
-       ──────────────────────────────────────────────────────────
-       Holds everything about the in-progress drag gesture.
-       Kept in a single object so every handler can share it.
-       ========================================================== */
+    /* Math session state */
+    const mathState = {
+      level:          null,
+      problemList:    [],
+      problemIndex:   0,
+      currentProblem: null,
+      mistakes:       0,
+      totalStars:     0,
+      maxRange:       10,
+    };
+
+    /*
+      Shared drag state — only ever one drag happening at a time,
+      so this one object is safe to share across both games.
+    */
     const drag = {
-      active:  false,  // is a drag currently happening?
-      tile:    null,   // the original tile element being dragged
-      ghost:   null,   // the floating clone that follows the pointer
-      offsetX: 0,      // pointer X distance from the tile's top-left corner
-      offsetY: 0,      // pointer Y distance from the tile's top-left corner
+      active:  false,
+      tile:    null,   /* the original tile being dragged          */
+      ghost:   null,   /* the floating clone that follows pointer  */
+      offsetX: 0,
+      offsetY: 0,
     };
 
+    /* Reading session state */
+    const readingState = {
+      level:        null,
+      storyList:    [],
+      storyIndex:   0,
+      currentStory: null,
+      mistakes:     0,
+      totalStars:   0,
+    };
+
+    /* Singing Hunters session state */
+    const huntersState = {
+      level: null, active: false, hardPhase: null,
+      /* shared scoring */
+      totalStars: 0, pitchCorrect: 0,
+      /* rhythm fields */
+      pitches: [], noteIndex: 0, totalNotes: 0,
+      caught: 0, missed: 0, inTapZone: false,
+      rafId: null, startTime: null, fallMs: 2400, noteEl: null, _gapMs: 700,
+      /* pitch-battle fields */
+      pitchChallenges: [], pitchIndex: 0, totalPitchChallenges: 0,
+      currentPitch: null, mistakes: 0,
+    };
+
+    /*
+      Tracks which game just ended so "Play Again" restarts the
+      right game. Set in startGame(), startMathGame(), startReadingGame(), startHuntersGame().
+    */
+    let activeGame = { name: null, level: null };
+
+
     /* ==========================================================
-       DOM REFERENCES
-       ──────────────────────────────────────────────────────────
-       Grab elements once at startup. Prefix $ is a convention
-       (not special syntax) to flag "this holds a DOM element".
-       document.getElementById is like soup.find(id="…") in Python's
-       BeautifulSoup, but returns the live DOM element.
+       ╔══════════════════════════════════════════════════════════╗
+       ║  SECTION C — DOM REFERENCES                              ║
+       ╚══════════════════════════════════════════════════════════╝
        ========================================================== */
-    const $startScreen  = document.getElementById("start-screen");
-    const $gameScreen   = document.getElementById("game-screen");
+    /* Grab each element once; prefix $ = "this is a DOM element" */
+
+    /* Spelling */
     const $emojiDisplay = document.getElementById("emoji-display");
     const $slotsArea    = document.getElementById("slots-area");
     const $tilesArea    = document.getElementById("tiles-area");
     const $scoreDisplay = document.getElementById("score-display");
     const $wordProgress = document.getElementById("word-progress");
     const $backBtn      = document.getElementById("back-btn");
-    const $endScreen    = document.getElementById("end-screen");
+
+    /* Math */
+    const $mathLeft     = document.getElementById("math-left");
+    const $mathOp       = document.getElementById("math-op");
+    const $mathResult   = document.getElementById("math-result");
+    const $mathSlot     = document.getElementById("math-slot");
+    const $mathTiles    = document.getElementById("math-tiles");
+    const $mathScore    = document.getElementById("math-score");
+    const $mathProgress = document.getElementById("math-progress");
+
+    /* Shared */
     const $wordOverlay  = document.getElementById("word-overlay");
+    const $toast        = document.getElementById("toast");
+
 
     /* ==========================================================
-       UTILITY: shuffle(array)
-       ──────────────────────────────────────────────────────────
-       Fisher-Yates shuffle — randomises an array in place.
-       Like Python's random.shuffle(), but returns the array too.
+       ╔══════════════════════════════════════════════════════════╗
+       ║  SECTION D — UTILITIES                                   ║
+       ╚══════════════════════════════════════════════════════════╝
        ========================================================== */
+
+    /*
+      Fisher-Yates shuffle — randomises an array IN PLACE and
+      returns it. Like Python's random.shuffle() but also returns
+      the array for convenience.
+    */
     function shuffle(array) {
       for (let i = array.length - 1; i > 0; i--) {
-        // Math.random() → float in [0, 1), like Python's random.random()
         const j = Math.floor(Math.random() * (i + 1));
-        // Swap array[i] and array[j] via JS destructuring:
-        //   [a, b] = [b, a]  is the same idea as  a, b = b, a  in Python
-        [array[i], array[j]] = [array[j], array[i]];
+        [array[i], array[j]] = [array[j], array[i]]; /* swap via destructuring */
       }
       return array;
     }
 
-    /* ==========================================================
-       SCREEN MANAGEMENT
-       ========================================================== */
-
     /*
-      Show one screen by name, hide the other.
-      classList.add / classList.remove work like Python's
-      set.add() and set.discard() on the element's class list.
+      Generic screen switcher. Hides every .screen div, then
+      removes "hidden" from the one whose id matches `id`.
+
+      Adding a new game screen in HTML requires ZERO changes here —
+      just give the new <div> class="screen" and the right id.
     */
-    function showScreen(name) {
-      // Hide every screen and the overlay, then reveal the requested one.
-      // Hiding the overlay here means navigating away mid-overlay cleans up safely.
-      $startScreen.classList.add("hidden");
-      $gameScreen.classList.add("hidden");
-      $endScreen.classList.add("hidden");
+    function showScreen(id) {
+      document.querySelectorAll(".screen").forEach(s => s.classList.add("hidden"));
       $wordOverlay.classList.add("hidden");
-      if (name === "start") $startScreen.classList.remove("hidden");
-      if (name === "game")  $gameScreen.classList.remove("hidden");
-      if (name === "end")   $endScreen.classList.remove("hidden");
+      const target = document.getElementById(id);
+      if (target) target.classList.remove("hidden");
+      document.body.dataset.screen = id;
     }
 
-    /* ==========================================================
-       START SCREEN
-       ========================================================== */
+    /* Convenience wrappers — keeps IDs in one place */
+    function showHome()          { showScreen("screen-home"); }
+    function showSpellingStart() { showScreen("screen-spelling-start"); }
+    function showMathStart()     { showScreen("screen-math-start"); }
+    function showReadingStart()  { showScreen("screen-reading-start"); }
+    function showHuntersStart()  { showScreen("screen-hunters-start"); }
 
-    function showStartScreen() {
-      showScreen("start");
+    /* Toast notification — brief message that slides up from bottom */
+    let toastTimer = null;
+
+    function showToast(message) {
+      $toast.textContent = message;
+      $toast.classList.add("toast-visible");
+      clearTimeout(toastTimer); /* clearTimeout on null/undefined is a safe no-op */
+      toastTimer = setTimeout(() => $toast.classList.remove("toast-visible"), 2200);
     }
 
+
     /* ==========================================================
-       GAME SETUP
+       ╔══════════════════════════════════════════════════════════╗
+       ║  SECTION E — SPELLING GAME                               ║
+       ╚══════════════════════════════════════════════════════════╝
        ========================================================== */
 
     function startGame(level) {
+      activeGame       = { name: "spelling", level };
       state.level      = level;
       state.totalStars = 0;
       state.wordIndex  = 0;
-
       /*
-        [...WORDS[level]] is the spread operator — creates a shallow
-        copy of the array before shuffling, so the original WORDS
-        object is never mutated. Same idea as Python's list(WORDS[level])
-        or WORDS[level][:].
+        Spread operator [...arr] creates a shallow copy before
+        shuffling so the original WORDS object is never mutated.
+        Same as Python's  list(WORDS[level])  or  WORDS[level][:].
       */
-      state.wordList = shuffle([...WORDS[level]]);
-
-      showScreen("game");
+      state.wordList   = shuffle([...WORDS[level]]);
+      showScreen("screen-spelling-game");
       loadWord();
     }
 
     function loadWord() {
       if (state.wordIndex >= state.wordList.length) {
-        showEndScreen();
+        activeGame = { name: "spelling", level: state.level };
+        showEndScreen(state.totalStars, state.wordList.length * 3);
         return;
       }
-
       state.currentWord = state.wordList[state.wordIndex];
       state.mistakes    = 0;
-
-      /*
-        new Array(n).fill(null) creates [null, null, …, null] of
-        length n — like Python's [None] * n.
-      */
+      /* new Array(n).fill(null) ≈ Python's  [None] * n */
       state.filledSlots = new Array(state.currentWord.word.length).fill(null);
-
       renderGameScreen();
     }
 
-    /* ==========================================================
-       RENDER GAME SCREEN
-       ──────────────────────────────────────────────────────────
-       Builds the emoji display, letter slots, and letter tiles
-       for the current word. Called every time a new word loads.
-       ========================================================== */
-
     function renderGameScreen() {
       /*
-        Destructuring: pulls named properties out of an object.
+        Destructuring pulls named properties from an object:
           const { word, emoji } = obj
-        is equivalent to Python's:
+        is the same as Python's:
           word, emoji = obj["word"], obj["emoji"]
       */
       const { word, emoji } = state.currentWord;
 
-      // Update emoji
       $emojiDisplay.textContent = emoji;
       $emojiDisplay.setAttribute("aria-label", `Picture: ${word}`);
+      $wordProgress.textContent = `Word ${state.wordIndex + 1} of ${state.wordList.length}`;
 
-      // Update "Word N of M" counter
-      $wordProgress.textContent =
-        `Word ${state.wordIndex + 1} of ${state.wordList.length}`;
-
-      // ── Build letter slots ──────────────────────────────────
-      $slotsArea.innerHTML = "";   // wipe old slots (innerHTML = "" clears children)
-
+      /* Build letter slots */
+      $slotsArea.innerHTML = "";
       for (let i = 0; i < word.length; i++) {
         const slot = document.createElement("div");
-        slot.className          = "slot";
-        slot.dataset.index      = i;        // position in the word (0-based)
-        slot.dataset.letter     = word[i];  // the correct letter for this position
+        slot.className      = "slot";
+        slot.dataset.index  = i;
+        slot.dataset.letter = word[i];
         slot.setAttribute("role", "listitem");
         slot.setAttribute("aria-label", `Slot ${i + 1} of ${word.length}`);
         $slotsArea.appendChild(slot);
       }
 
-      // ── Build shuffled letter tiles ──────────────────────────
+      /* Build shuffled letter tiles */
       $tilesArea.innerHTML = "";
+      const letters = shuffle(word.split("")); /* "cat" → ["c","a","t"] */
 
       /*
-        word.split("") converts "cat" → ["c", "a", "t"]
-        Same as list("cat") in Python.
-      */
-      const letters = shuffle(word.split(""));
-
-      /*
-        forEach is a looping method on arrays; the callback receives
-        the element and its index. Like Python's:
-          for colorIndex, letter in enumerate(letters): …
+        forEach loops an array; callback receives element + index.
+        Like Python's:  for colorIndex, letter in enumerate(letters): …
       */
       letters.forEach((letter, colorIndex) => {
         const tile = document.createElement("div");
-
-        // "enter" triggers the tile-enter CSS animation
         tile.className          = "tile enter";
         tile.textContent        = letter.toUpperCase();
         tile.dataset.letter     = letter;
-        tile.dataset.colorIndex = colorIndex % 6;  // cycle through 6 colour swatches
-
-        /*
-          Stagger each tile's entrance so they rise in sequence.
-          Backtick strings are JS template literals — like Python f-strings.
-          `${expr}` inserts the value of expr into the string.
-          The inline animation-delay overrides the class's default 0 s delay.
-        */
+        tile.dataset.colorIndex = colorIndex % 6;
+        /* Stagger entrance so tiles rise in sequence */
         tile.style.animationDelay = `${colorIndex * 65}ms`;
-
         tile.setAttribute("role", "listitem");
         tile.setAttribute("aria-label", `Letter tile: ${letter.toUpperCase()}`);
-        tile.addEventListener("pointerdown", onTilePointerDown);
+        /* Bind spelling-specific pointer handler */
+        tile.addEventListener("pointerdown", onSpellingTilePointerDown);
         $tilesArea.appendChild(tile);
       });
 
       updateScoreDisplay();
-
-      // Speak the word after tiles have animated in (~350 ms stagger).
-      // Works reliably on the first word (within the button-click gesture chain).
-      // For subsequent words the 🔊 button provides the gesture-based trigger on iOS.
       setTimeout(() => speak(state.currentWord.word), 380);
     }
-
-    /* ==========================================================
-       SCORE DISPLAY
-       ========================================================== */
 
     function updateScoreDisplay() {
       $scoreDisplay.textContent = `⭐ ${state.totalStars}`;
     }
 
+
     /* ==========================================================
-       DRAG HELPERS
+       ╔══════════════════════════════════════════════════════════╗
+       ║  SECTION F — SHARED DRAG-AND-DROP                        ║
+       ║                                                           ║
+       ║  startDrag() is a shared helper that handles all the      ║
+       ║  common setup (clone, position ghost, capture pointer).   ║
+       ║  It accepts move/up handlers as parameters so Spelling    ║
+       ║  and Maths can each plug in their own drop logic.         ║
+       ╚══════════════════════════════════════════════════════════╝
        ========================================================== */
 
-    // Reposition the ghost so it visually follows the pointer.
-    // The ghost uses `position: fixed`, so left/top are viewport-relative —
-    // the same coordinate space as clientX/clientY. Simple subtraction aligns them.
+    /*
+      In Python terms this is like a higher-order function:
+        def start_drag(e, move_handler, up_handler):
+            ...bind the handlers...
+    */
+    function startDrag(e, moveHandler, upHandler) {
+      const tile = e.currentTarget;
+      const rect = tile.getBoundingClientRect();
+
+      drag.active  = true;
+      drag.tile    = tile;
+      drag.offsetX = e.clientX - rect.left;
+      drag.offsetY = e.clientY - rect.top;
+
+      /* cloneNode(true) deep-copies the element with all data-* attrs */
+      drag.ghost = tile.cloneNode(true);
+      drag.ghost.classList.add("drag-ghost");
+      drag.ghost.classList.remove("enter", "shake", "dragging");
+      drag.ghost.style.animationDelay = "0ms"; /* suppress re-run of enter animation */
+      document.body.appendChild(drag.ghost);   /* fixed position needs a body parent */
+      positionGhost(e.clientX, e.clientY);
+
+      tile.classList.add("dragging");
+
+      /*
+        setPointerCapture routes ALL future events for this pointer
+        to `tile` even if the pointer leaves the element — prevents
+        "losing" fast swipes on touch screens.
+      */
+      tile.setPointerCapture(e.pointerId);
+
+      tile.addEventListener("pointermove",   moveHandler);
+      tile.addEventListener("pointerup",     upHandler);
+      tile.addEventListener("pointercancel", upHandler); /* e.g. incoming phone call */
+
+      e.preventDefault(); /* stops browser starting a scroll/text-select gesture */
+    }
+
+    /* Move the ghost so it tracks the pointer exactly */
     function positionGhost(clientX, clientY) {
       drag.ghost.style.left = (clientX - drag.offsetX) + "px";
       drag.ghost.style.top  = (clientY - drag.offsetY) + "px";
     }
 
-    // Add .drag-over highlight to whichever unfilled slot the ghost's centre is over.
-    function updateSlotHighlights() {
+    /* Clean up the ghost and restore the original tile opacity */
+    function endDrag() {
+      if (drag.ghost) { drag.ghost.remove(); drag.ghost = null; }
+      if (drag.tile)  { drag.tile.classList.remove("dragging"); drag.tile = null; }
+      /* Remove drag-over highlight from ANY slot/eq-slot across all games */
+      document.querySelectorAll(".drag-over").forEach(s => s.classList.remove("drag-over"));
+      drag.active = false;
+    }
+
+
+    /* ── Spelling pointer handlers ─────────────────────────── */
+
+    function onSpellingTilePointerDown(e) {
+      if (drag.active || e.currentTarget.dataset.placed) return;
+      startDrag(e, onSpellingTilePointerMove, onSpellingTilePointerUp);
+    }
+
+    function onSpellingTilePointerMove(e) {
+      positionGhost(e.clientX, e.clientY);
+      updateSpellingSlotHighlights();
+    }
+
+    function onSpellingTilePointerUp(e) {
+      drag.tile.removeEventListener("pointermove",   onSpellingTilePointerMove);
+      drag.tile.removeEventListener("pointerup",     onSpellingTilePointerUp);
+      drag.tile.removeEventListener("pointercancel", onSpellingTilePointerUp);
+
+      const slot = findSpellingSlot();
+      if (slot) {
+        if (drag.tile.dataset.letter === slot.dataset.letter) {
+          spellingCorrectDrop(drag.tile, slot);
+        } else {
+          state.mistakes++;   /* track mistakes in spelling state before shared shake */
+          wrongDrop(drag.tile);
+        }
+      }
+      endDrag();
+    }
+
+    /* Highlight whichever unfilled spelling slot the ghost centre hovers over */
+    function updateSpellingSlotHighlights() {
       const g  = drag.ghost.getBoundingClientRect();
       const cx = g.left + g.width  / 2;
       const cy = g.top  + g.height / 2;
-
       $slotsArea.querySelectorAll(".slot").forEach(slot => {
         slot.classList.remove("drag-over");
-        if (slot.dataset.filled) return;    // skip slots that are already filled
+        if (slot.dataset.filled) return;
         const r = slot.getBoundingClientRect();
         if (cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom) {
           slot.classList.add("drag-over");
@@ -921,233 +2749,1197 @@
       });
     }
 
-    // Return the first unfilled slot whose bounding box contains the ghost's centre,
-    // or null if none.
-    // getBoundingClientRect() returns { left, top, right, bottom, width, height }
-    // in viewport-relative CSS pixels — the same space as clientX/clientY.
-    function findOverlappingSlot() {
+    /* Return the first unfilled spelling slot under the ghost, or null */
+    function findSpellingSlot() {
       const g  = drag.ghost.getBoundingClientRect();
       const cx = g.left + g.width  / 2;
       const cy = g.top  + g.height / 2;
-
       for (const slot of $slotsArea.querySelectorAll(".slot")) {
         if (slot.dataset.filled) continue;
         const r = slot.getBoundingClientRect();
-        if (cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom) {
-          return slot;
-        }
+        if (cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom) return slot;
       }
       return null;
     }
 
-    /* ==========================================================
-       POINTER EVENT HANDLERS
-       ──────────────────────────────────────────────────────────
-       Three events drive the whole drag lifecycle:
-         pointerdown  — finger/cursor touches the tile
-         pointermove  — moves while held
-         pointerup    — finger/cursor lifts
-       Pointer Events unify mouse and touch in one code path — no
-       separate touchstart / touchmove block needed.
-       ========================================================== */
 
-    function onTilePointerDown(e) {
-      if (drag.active)                    return;  // already dragging something
-      if (e.currentTarget.dataset.placed) return;  // tile already snapped into a slot
+    /* ── Math pointer handlers ─────────────────────────────── */
 
-      const tile = e.currentTarget;   // the element the listener is attached to
-      const rect = tile.getBoundingClientRect();
-
-      drag.active  = true;
-      drag.tile    = tile;
-      // Record where inside the tile the pointer landed.
-      // Subtracting this offset when positioning the ghost makes it feel like
-      // you grabbed the tile at exactly that spot (not always the centre).
-      drag.offsetX = e.clientX - rect.left;
-      drag.offsetY = e.clientY - rect.top;
-
-      // ── Create the floating ghost ───────────────────────────
-      // cloneNode(true) deep-copies the element, including all data-* attributes
-      drag.ghost = tile.cloneNode(true);
-      drag.ghost.classList.add("drag-ghost");
-      drag.ghost.classList.remove("enter", "shake", "dragging");
-      drag.ghost.style.animationDelay = "0ms";  // suppress staggered entry re-run
-      document.body.appendChild(drag.ghost);    // append to <body> so `position: fixed` works
-      positionGhost(e.clientX, e.clientY);
-
-      // Make the original tile translucent while its ghost is in the air
-      tile.classList.add("dragging");
-
-      // setPointerCapture routes all future events for this pointer ID to `tile`,
-      // even when the pointer moves off it — prevents losing fast drags on touch screens.
-      tile.setPointerCapture(e.pointerId);
-
-      // Attach move + release listeners directly to the tile, not document.
-      // They're automatically scoped to this one gesture and we remove them on pointerup.
-      tile.addEventListener("pointermove",   onTilePointerMove);
-      tile.addEventListener("pointerup",     onTilePointerUp);
-      tile.addEventListener("pointercancel", onTilePointerUp);  // handles interruptions (phone call, etc.)
-
-      e.preventDefault();  // stop the browser starting a text selection or scroll gesture
+    function onMathTilePointerDown(e) {
+      if (drag.active || e.currentTarget.dataset.placed) return;
+      startDrag(e, onMathTilePointerMove, onMathTilePointerUp);
     }
 
-    function onTilePointerMove(e) {
+    function onMathTilePointerMove(e) {
       positionGhost(e.clientX, e.clientY);
-      updateSlotHighlights();
+      updateMathSlotHighlight();
     }
 
-    function onTilePointerUp(e) {
-      // Remove the temporary per-gesture listeners before anything else
-      drag.tile.removeEventListener("pointermove",   onTilePointerMove);
-      drag.tile.removeEventListener("pointerup",     onTilePointerUp);
-      drag.tile.removeEventListener("pointercancel", onTilePointerUp);
+    function onMathTilePointerUp(e) {
+      drag.tile.removeEventListener("pointermove",   onMathTilePointerMove);
+      drag.tile.removeEventListener("pointerup",     onMathTilePointerUp);
+      drag.tile.removeEventListener("pointercancel", onMathTilePointerUp);
 
-      const slot = findOverlappingSlot();  // ghost is still in the DOM here, so this works
-
+      const slot = findMathSlot();
       if (slot) {
-        if (drag.tile.dataset.letter === slot.dataset.letter) {
-          correctDrop(drag.tile, slot);
+        const answer = getAnswer(mathState.currentProblem);
+        if (parseInt(drag.tile.dataset.value) === answer) {
+          mathCorrectDrop(drag.tile, slot);
         } else {
+          mathState.mistakes++; /* track mistakes in math state before shared shake */
           wrongDrop(drag.tile);
         }
       }
-      // If slot === null the tile was dropped in empty space; endDrag restores it.
-
       endDrag();
     }
 
+    /* Highlight the math slot if the ghost centre is over it */
+    function updateMathSlotHighlight() {
+      $mathSlot.classList.remove("drag-over");
+      if ($mathSlot.dataset.filled) return;
+      const g  = drag.ghost.getBoundingClientRect();
+      const cx = g.left + g.width  / 2;
+      const cy = g.top  + g.height / 2;
+      const r  = $mathSlot.getBoundingClientRect();
+      if (cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom) {
+        $mathSlot.classList.add("drag-over");
+      }
+    }
+
+    /* Return the math slot if it's unfilled and under the ghost, else null */
+    function findMathSlot() {
+      if ($mathSlot.dataset.filled) return null;
+      const g  = drag.ghost.getBoundingClientRect();
+      const cx = g.left + g.width  / 2;
+      const cy = g.top  + g.height / 2;
+      const r  = $mathSlot.getBoundingClientRect();
+      return (cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom)
+        ? $mathSlot : null;
+    }
+
+
     /* ==========================================================
-       DROP OUTCOMES
+       ╔══════════════════════════════════════════════════════════╗
+       ║  SECTION G — DROP OUTCOMES                               ║
+       ╚══════════════════════════════════════════════════════════╝
        ========================================================== */
 
-    function correctDrop(tile, slot) {
+    function spellingCorrectDrop(tile, slot) {
       playCorrect();
-      // Show the letter inside the slot
       slot.textContent    = tile.dataset.letter.toUpperCase();
       slot.dataset.filled = "true";
       slot.classList.add("filled", "snap");
-
-      // { once: true } auto-removes the listener after it fires once —
-      // like wrapping a callback in a "run once" helper in Python.
-      slot.addEventListener("animationend", () => {
-        slot.classList.remove("snap");
-      }, { once: true });
-
-      // Hide the original tile — it now "lives" inside the slot visually
+      /* { once: true } auto-removes the listener after one fire */
+      slot.addEventListener("animationend", () => slot.classList.remove("snap"), { once: true });
       tile.style.visibility = "hidden";
       tile.dataset.placed   = "true";
-
-      // Record which letter is in this position
       state.filledSlots[parseInt(slot.dataset.index)] = tile.dataset.letter;
-
-      // Array.every() is like Python's all() —
-      // returns true only if every element passes the test function
-      if (state.filledSlots.every(letter => letter !== null)) {
-        wordComplete();
-      }
+      /* Array.every() ≈ Python's all() */
+      if (state.filledSlots.every(l => l !== null)) wordComplete();
     }
 
+    function mathCorrectDrop(tile, slot) {
+      playCorrect();
+      slot.textContent    = tile.dataset.value;
+      slot.dataset.filled = "true";
+      slot.classList.add("filled", "snap");
+      slot.addEventListener("animationend", () => slot.classList.remove("snap"), { once: true });
+      tile.style.visibility = "hidden";
+      tile.dataset.placed   = "true";
+      mathProblemComplete();
+    }
+
+    /*
+      wrongDrop handles the shared visual/audio feedback for a wrong answer.
+      The caller is responsible for incrementing its own mistakes counter
+      before calling this — that keeps game state out of the shared helper.
+    */
     function wrongDrop(tile) {
-      state.mistakes++;
       playWrong();
-      // Remove the dragging opacity NOW so the shake animation is visible on the tile
       tile.classList.remove("dragging");
       tile.classList.add("shake");
-      tile.addEventListener("animationend", () => {
-        tile.classList.remove("shake");
-      }, { once: true });
+      tile.addEventListener("animationend", () => tile.classList.remove("shake"), { once: true });
     }
 
-    function endDrag() {
-      if (drag.ghost) {
-        drag.ghost.remove();  // remove the floating clone from the DOM
-        drag.ghost = null;
-      }
-      if (drag.tile) {
-        drag.tile.classList.remove("dragging");  // restore full opacity
-        drag.tile = null;
-      }
-      // Clear any lingering slot highlights
-      $slotsArea.querySelectorAll(".slot.drag-over").forEach(s => {
-        s.classList.remove("drag-over");
-      });
-      drag.active = false;
-    }
 
     /* ==========================================================
-       SCORING
+       ╔══════════════════════════════════════════════════════════╗
+       ║  SECTION H — SHARED SCORING & OVERLAY                    ║
+       ╚══════════════════════════════════════════════════════════╝
        ========================================================== */
 
-    // Stars for one word: 3 for perfect, 2 for one mistake, 1 for two or more.
+    /* Stars: 3 = perfect, 2 = one mistake, 1 = two or more */
     function starsForWord(mistakes) {
       if (mistakes === 0) return 3;
       if (mistakes === 1) return 2;
       return 1;
     }
 
+    /*
+      Show the between-round star card, then call onDismiss().
+      onDismiss is a callback — a function passed as an argument,
+      like passing a lambda to Python's sorted(key=…).
+
+      Accepting a callback means Spelling and Maths can each pass
+      their own "what to do next" logic without duplicating the
+      overlay HTML/timing code.
+    */
+    function showWordOverlay(stars, onDismiss) {
+      document.getElementById("overlay-stars").textContent   = "⭐".repeat(stars);
+      document.getElementById("overlay-message").textContent =
+        stars === 3 ? "Amazing! 🎉"
+        : stars === 2 ? "Well done! 👍"
+        :               "Keep it up! 💪";
+      $wordOverlay.classList.remove("hidden");
+      setTimeout(() => {
+        $wordOverlay.classList.add("hidden");
+        /* onDismiss?.() is the "optional chaining" call:
+           call onDismiss() only if it's not undefined/null */
+        if (onDismiss) onDismiss();
+      }, 1400);
+    }
+
+    /* Shared end screen — filled by whichever game just finished */
+    function showEndScreen(totalStars, maxStars) {
+      document.getElementById("end-star-count").textContent = `⭐ ${totalStars}`;
+      document.getElementById("end-max-text").textContent   = `out of ${maxStars}`;
+      showScreen("screen-end");
+    }
+
+    /* Confetti shower (reused by both games) */
+    function launchConfetti() {
+      const colors = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#f98d4b','#c084fc','#ffffff'];
+      const shapes = ['2px', '4px', '50%'];
+      for (let i = 0; i < 55; i++) {
+        const piece = document.createElement("div");
+        piece.className = "confetti-piece";
+        piece.style.left            = (Math.random() * 100) + "%";
+        piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.borderRadius    = shapes[Math.floor(Math.random() * shapes.length)];
+        const size = Math.random() * 8 + 8;
+        piece.style.width  = size + "px";
+        piece.style.height = (size * (Math.random() * 0.8 + 0.6)) + "px";
+        piece.style.setProperty("--drift", (Math.random() * 120 - 60) + "px");
+        piece.style.animationDuration = (Math.random() * 1.5 + 1.8) + "s";
+        piece.style.animationDelay   = (Math.random() * 0.5) + "s";
+        document.body.appendChild(piece);
+        piece.addEventListener("animationend", () => piece.remove(), { once: true });
+      }
+    }
+
+
     /* ==========================================================
-       WORD COMPLETE
-       ──────────────────────────────────────────────────────────
-       Called when every slot in the current word is filled.
-       Awards stars, updates the running total, then shows the
-       overlay before moving to the next word.
-       Celebration animation is added in the next step.
+       ╔══════════════════════════════════════════════════════════╗
+       ║  SECTION I — SPELLING ROUND COMPLETE                     ║
+       ╚══════════════════════════════════════════════════════════╝
        ========================================================== */
+
     function wordComplete() {
       const earned = starsForWord(state.mistakes);
       state.totalStars += earned;
       updateScoreDisplay();
-      playWordComplete();                      // ascending arpeggio fanfare
-      launchConfetti();                        // shower of coloured pieces
-      showWordOverlay(earned);
-    }
-
-    // Display the star-rating card, then after a short pause advance the game.
-    function showWordOverlay(stars) {
-      document.getElementById("overlay-stars").textContent = "⭐".repeat(stars);
-
-      // Ternary chaining: condition ? a : condition2 ? b : c
-      // Same idea as Python's  a if cond else b if cond2 else c
-      document.getElementById("overlay-message").textContent =
-          stars === 3 ? "Amazing! 🎉"
-        : stars === 2 ? "Well done! 👍"
-        :               "Keep it up! 💪";
-
-      $wordOverlay.classList.remove("hidden");
-
-      setTimeout(() => {
-        $wordOverlay.classList.add("hidden");
+      playWordComplete();
+      launchConfetti();
+      /*
+        Pass a callback arrow function as the second argument.
+        Arrow functions:  () => { ... }  are like Python lambdas
+        with a block body:  lambda: (wordIndex++, loadWord()).
+      */
+      showWordOverlay(earned, () => {
         state.wordIndex++;
         loadWord();
-      }, 1400);
+      });
     }
 
     /* ==========================================================
-       END SCREEN
-       ──────────────────────────────────────────────────────────
-       Called after all words in the word list are played.
+       ╔══════════════════════════════════════════════════════════╗
+       ║  SECTION J — MATH GAME                                   ║
+       ╚══════════════════════════════════════════════════════════╝
        ========================================================== */
-    function showEndScreen() {
-      const maxStars = state.wordList.length * 3;
-      document.getElementById("end-star-count").textContent = `⭐ ${state.totalStars}`;
-      document.getElementById("end-max-text").textContent   = `out of ${maxStars}`;
-      showScreen("end");
+
+    /*
+      Compute the missing number from a problem descriptor.
+      For  { a:3, op:"+", result:7 }  →  answer = 7 − 3 = 4
+      For  { a:8, op:"−", result:5 }  →  answer = 8 − 5 = 3
+    */
+    function getAnswer(prob) {
+      return prob.op === "+" ? prob.result - prob.a : prob.a - prob.result;
     }
 
-    /* ==========================================================
-       AUDIO — Web Audio API
-       ──────────────────────────────────────────────────────────
-       The Web Audio API generates tones mathematically — no audio
-       files needed. An OscillatorNode produces a raw waveform at a
-       given frequency; a GainNode controls volume and shapes the
-       envelope; both connect to AudioContext.destination (speakers).
+    /*
+      Generate `count` wrong-but-plausible distractors near `answer`.
+      We try ±1, ±2, ±3 … offsets in order, keeping candidates that
+      are within [0, maxRange] and not equal to the answer.
+    */
+    function generateDistractors(answer, maxRange, count = 2) {
+      const chosen  = [];
+      const offsets = [1, -1, 2, -2, 3, -3, 4, -4, 5, -5];
+      for (const offset of offsets) {
+        if (chosen.length >= count) break;
+        const candidate = answer + offset;
+        if (candidate >= 0 && candidate <= maxRange && !chosen.includes(candidate)) {
+          chosen.push(candidate);
+        }
+      }
+      /* Fallback: fill from any valid number if we somehow ran out of offsets */
+      for (let i = 0; i <= maxRange && chosen.length < count; i++) {
+        if (i !== answer && !chosen.includes(i)) chosen.push(i);
+      }
+      return chosen;
+    }
 
-       AudioContext must be created after a user gesture (browser
-       autoplay policy), so we create it lazily on first use.
+    /* Build the spoken sentence for a math problem */
+    function speakMath(prob) {
+      const opWord = prob.op === "+" ? "plus" : "minus";
+      speak(`${NUM_WORDS[prob.a]} ${opWord} what equals ${NUM_WORDS[prob.result]}?`);
+    }
+
+    function startMathGame(level) {
+      activeGame              = { name: "math", level };
+      mathState.level         = level;
+      mathState.totalStars    = 0;
+      mathState.problemIndex  = 0;
+      mathState.maxRange      = MATH_MAX_RANGE[level];
+      mathState.problemList   = shuffle([...MATH_PROBLEMS[level]]);
+      showScreen("screen-math-game");
+      loadMathProblem();
+    }
+
+    function loadMathProblem() {
+      if (mathState.problemIndex >= mathState.problemList.length) {
+        activeGame = { name: "math", level: mathState.level };
+        showEndScreen(mathState.totalStars, mathState.problemList.length * 3);
+        return;
+      }
+      mathState.currentProblem = mathState.problemList[mathState.problemIndex];
+      mathState.mistakes       = 0;
+      renderMathProblem();
+    }
+
+    function renderMathProblem() {
+      const prob   = mathState.currentProblem;
+      const answer = getAnswer(prob);
+
+      /* Fill the static equation parts */
+      $mathLeft.textContent   = prob.a;
+      $mathOp.textContent     = prob.op;
+      $mathResult.textContent = prob.result;
+
+      /* Reset the answer slot */
+      $mathSlot.textContent = "";
+      delete $mathSlot.dataset.filled;
+      $mathSlot.classList.remove("filled", "snap");
+
+      /* Update progress label */
+      $mathProgress.textContent =
+        `Sum ${mathState.problemIndex + 1} of ${mathState.problemList.length}`;
+
+      /* Build tile choices: correct answer + 2 plausible distractors */
+      const distractors = generateDistractors(answer, mathState.maxRange);
+      const tileValues  = shuffle([answer, ...distractors]);
+
+      $mathTiles.innerHTML = "";
+      tileValues.forEach((value, colorIndex) => {
+        const tile = document.createElement("div");
+        tile.className          = "tile math-tile enter";
+        tile.textContent        = value;
+        tile.dataset.value      = value;
+        tile.dataset.colorIndex = colorIndex % 6;
+        tile.style.animationDelay = `${colorIndex * 65}ms`;
+        tile.setAttribute("role", "listitem");
+        tile.setAttribute("aria-label", `Number tile: ${value}`);
+        tile.addEventListener("pointerdown", onMathTilePointerDown);
+        $mathTiles.appendChild(tile);
+      });
+
+      updateMathScoreDisplay();
+      setTimeout(() => speakMath(prob), 380);
+    }
+
+    function updateMathScoreDisplay() {
+      $mathScore.textContent = `⭐ ${mathState.totalStars}`;
+    }
+
+    function mathProblemComplete() {
+      const earned = starsForWord(mathState.mistakes);
+      mathState.totalStars += earned;
+      updateMathScoreDisplay();
+      playWordComplete();
+      launchConfetti();
+      showWordOverlay(earned, () => {
+        mathState.problemIndex++;
+        loadMathProblem();
+      });
+    }
+
+
+    /* ==========================================================
+       ╔══════════════════════════════════════════════════════════╗
+       ║  SECTION K — READING GAME                                ║
+       ╚══════════════════════════════════════════════════════════╝
+       ========================================================== */
+
+    function startReadingGame(level) {
+      activeGame               = { name: "reading", level };
+      readingState.level       = level;
+      readingState.totalStars  = 0;
+      readingState.storyIndex  = 0;
+      readingState.storyList   = shuffle([...STORIES[level]]);
+      showScreen("screen-reading-game");
+      loadReadingStory();
+    }
+
+    function loadReadingStory() {
+      if (readingState.storyIndex >= readingState.storyList.length) {
+        activeGame = { name: "reading", level: readingState.level };
+        showEndScreen(readingState.totalStars, readingState.storyList.length * 3);
+        return;
+      }
+      readingState.currentStory = readingState.storyList[readingState.storyIndex];
+      readingState.mistakes     = 0;
+      renderReadingStory();
+    }
+
+    function renderReadingStory() {
+      const story = readingState.currentStory;
+
+      document.getElementById("reading-emoji").textContent    = story.emoji;
+      document.getElementById("reading-text").textContent     = story.text;
+      document.getElementById("reading-question").textContent = story.question;
+      document.getElementById("reading-progress").textContent =
+        `Story ${readingState.storyIndex + 1} of ${readingState.storyList.length}`;
+      document.getElementById("reading-score").textContent    =
+        `⭐ ${readingState.totalStars}`;
+
+      /* Build answer buttons — shuffle so correct isn't always first */
+      const $answers = document.getElementById("reading-answers");
+      $answers.innerHTML = "";
+
+      /*
+        [...story.answers] copies the array before shuffling so the
+        original STORIES config is never mutated — same pattern as
+        the word/problem lists.
+      */
+      shuffle([...story.answers]).forEach(answer => {
+        const btn = document.createElement("button");
+        btn.className = "answer-btn";
+        btn.setAttribute("role", "listitem");
+        btn.setAttribute("aria-label", `${answer.text}`);
+
+        /*
+          innerHTML with template literals builds the inner structure.
+          Backtick strings:  `text ${expr} more`  ≈ Python f-strings.
+        */
+        btn.innerHTML =
+          `<span class="answer-btn-emoji">${answer.emoji}</span>` +
+          `<span class="answer-btn-label">${answer.text}</span>`;
+
+        btn.addEventListener("click", () => onReadingAnswerTap(btn, answer));
+        $answers.appendChild(btn);
+      });
+
+      /* Speak the story text after the entrance animation settles */
+      setTimeout(() => speak(story.text), 380);
+    }
+
+    function onReadingAnswerTap(btn, answer) {
+      /*
+        Speak the choice first (accessibility rule: answer choices must
+        be readable aloud when tapped). Then evaluate correct/wrong.
+        The sound gives immediate feedback so the speech doesn't feel
+        confusing even on a wrong answer.
+      */
+      speak(answer.text);
+
+      if (answer.correct) {
+        btn.classList.add("answer-correct");
+
+        /*
+          Disable all buttons immediately to prevent double-tapping
+          while the overlay is appearing. The buttons are re-created
+          fresh for the next story so we don't need to re-enable them.
+        */
+        document.querySelectorAll("#reading-answers .answer-btn").forEach(b => {
+          b.disabled = true;
+        });
+
+        /* Small delay so the green flash is visible before the overlay pops */
+        setTimeout(readingAnswerCorrect, 280);
+      } else {
+        readingState.mistakes++;
+        playWrong();
+        btn.classList.add("shake");
+        btn.addEventListener("animationend", () => btn.classList.remove("shake"), { once: true });
+      }
+    }
+
+    function readingAnswerCorrect() {
+      const earned = starsForWord(readingState.mistakes);
+      readingState.totalStars += earned;
+      document.getElementById("reading-score").textContent = `⭐ ${readingState.totalStars}`;
+      playWordComplete();
+      launchConfetti();
+      showWordOverlay(earned, () => {
+        readingState.storyIndex++;
+        loadReadingStory();
+      });
+    }
+
+
+    /* ==========================================================
+       ╔══════════════════════════════════════════════════════════╗
+       ║  SECTION L — SINGING HUNTERS GAME                        ║
+       ║  Easy   → Pitch Battle  (Low / Medium / High buttons)    ║
+       ║  Medium → Rhythm Rush   (tap notes as they fall)         ║
+       ║  Hard   → Rhythm Rush → Boss Pitch Battle                ║
+       ╚══════════════════════════════════════════════════════════╝
+       ========================================================== */
+
+    /* Pitch frequencies (Hz) and demon sequences */
+    const PITCH_FREQS = { low: 261, mid: 392, high: 523 };
+    const PITCH_EASY  = ["low","high","mid","low","high"];   /* Easy: 5 demons */
+    const PITCH_BOSS  = ["mid","high","low"];                /* Hard boss: 3 demons */
+
+    /* Rhythm melodies — ordered pitches, no shuffle */
+    const RHYTHM_SONGS   = {
+      medium: [523, 440, 392, 523, 659, 784, 523],
+      hard:   [523, 440, 392, 523, 392],
+    };
+    const RHYTHM_FALL_MS = { medium: 2400, hard: 1900 };
+    const RHYTHM_GAP_MS  = { medium: 700,  hard: 500  };
+
+    const HUNTERS_NOTE_COLORS = [
+      "#ff6b6b","#ffd93d","#6bcb77","#4d96ff",
+      "#f98d4b","#c084fc","#ff8fab","#a8e6cf","#ffcb77","#c3b1e1",
+    ];
+
+    /* ── Entry point ──────────────────────────────────────────── */
+
+    function startHuntersGame(level) {
+      activeGame                 = { name: "hunters", level };
+      huntersState.level         = level;
+      huntersState.active        = true;
+      huntersState.hardPhase     = null;
+      huntersState.totalStars    = 0;
+      huntersState.pitchCorrect  = 0;
+      huntersState.caught        = 0;
+      huntersState.missed        = 0;
+      showScreen("screen-hunters-game");
+      if      (level === "easy")   startPitchBattle(PITCH_EASY);
+      else if (level === "medium") startRhythmRush(RHYTHM_SONGS.medium, RHYTHM_FALL_MS.medium, RHYTHM_GAP_MS.medium);
+      else { huntersState.hardPhase = "rhythm";
+             startRhythmRush(RHYTHM_SONGS.hard, RHYTHM_FALL_MS.hard, RHYTHM_GAP_MS.hard); }
+    }
+
+    /* Show either the rhythm lane or the demon arena in the stage centre */
+    function showHuntersMode(mode) {
+      const r = mode === "rhythm";
+      document.getElementById("hunters-lane-wrap").classList.toggle("hidden", !r);
+      document.getElementById("hunters-demon-wrap").classList.toggle("hidden",  r);
+      document.getElementById("hunters-rhythm-controls").classList.toggle("hidden", !r);
+      document.getElementById("hunters-pitch-controls").classList.toggle("hidden",  r);
+    }
+
+    function updateHuntersHUD() {
+      const s = huntersState;
+      let score, prog;
+      if (s.level === "easy" || s.hardPhase === "boss") {
+        score = `⭐ ${s.totalStars}`;
+        prog  = s.hardPhase === "boss"
+          ? `Boss ${s.pitchIndex + 1} of ${s.totalPitchChallenges}`
+          : `Demon ${s.pitchIndex + 1} of ${s.totalPitchChallenges}`;
+      } else {
+        score = `⭐ ${s.caught}`;
+        prog  = `Note ${Math.min(s.noteIndex + 1, s.totalNotes)} of ${s.totalNotes}`;
+      }
+      document.getElementById("hunters-score").textContent    = score;
+      document.getElementById("hunters-progress").textContent = prog;
+    }
+
+    /* ── PITCH BATTLE ─────────────────────────────────────────── */
+
+    function startPitchBattle(challenges) {
+      showHuntersMode("pitch");
+      huntersState.pitchChallenges      = [...challenges];
+      huntersState.pitchIndex           = 0;
+      huntersState.totalPitchChallenges = challenges.length;
+      huntersState.mistakes             = 0;
+      updateHuntersHUD();
+      setTimeout(spawnDemon, 700);
+    }
+
+    function spawnDemon() {
+      if (!huntersState.active) return;
+      if (huntersState.pitchIndex >= huntersState.totalPitchChallenges) {
+        endPitchBattle(); return;
+      }
+      huntersState.currentPitch = huntersState.pitchChallenges[huntersState.pitchIndex];
+      huntersState.mistakes     = 0;
+
+      /* Rebuild demon — keep the pitch label element */
+      const $arena = document.getElementById("demon-arena");
+      let $label   = document.getElementById("hunters-pitch-label");
+      $arena.innerHTML = "";
+      if (!$label) { $label = document.createElement("div"); $label.id = "hunters-pitch-label"; }
+      $label.textContent = "👹 Listen carefully...";
+      $arena.appendChild($label);
+      $arena.appendChild(buildDemonSVG());
+
+      /* Re-enable pitch buttons */
+      document.querySelectorAll(".pitch-btn").forEach(btn => {
+        btn.disabled = false;
+        btn.classList.remove("pitch-correct", "shake");
+      });
+      updateHuntersHUD();
+
+      /* Play the demon's pitch, then prompt the child */
+      setTimeout(() => {
+        if (!huntersState.active) return;
+        playHuntersNote(PITCH_FREQS[huntersState.currentPitch]);
+        setTimeout(() => {
+          if (huntersState.active && $label)
+            $label.textContent = "🎵 Which sound was that?";
+        }, 600);
+      }, 650);
+    }
+
+    function buildDemonSVG() {
+      const ns = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(ns, "svg");
+      svg.setAttribute("viewBox", "0 0 110 140");
+      svg.setAttribute("class", "demon-creature");
+      svg.setAttribute("aria-hidden", "true");
+
+      /* Glow filter for eyes */
+      const defs = document.createElementNS(ns, "defs");
+      const filt = document.createElementNS(ns, "filter");
+      filt.id = "eye-glow"; filt.setAttribute("x","-50%"); filt.setAttribute("y","-50%");
+      filt.setAttribute("width","200%"); filt.setAttribute("height","200%");
+      const blur = document.createElementNS(ns, "feGaussianBlur");
+      blur.setAttribute("stdDeviation","3.5"); blur.setAttribute("result","blur");
+      const merge = document.createElementNS(ns, "feMerge");
+      ["blur","SourceGraphic"].forEach(src => {
+        const n = document.createElementNS(ns, "feMergeNode");
+        n.setAttribute("in", src); merge.appendChild(n);
+      });
+      filt.appendChild(blur); filt.appendChild(merge);
+      defs.appendChild(filt); svg.appendChild(defs);
+
+      /* Dark cloak / cape */
+      const cloak = document.createElementNS(ns, "path");
+      cloak.setAttribute("d","M55,50 C70,50 95,60 100,90 L110,140 L0,140 L10,90 C15,60 40,50 55,50 Z");
+      cloak.setAttribute("fill","#0c0020"); svg.appendChild(cloak);
+
+      /* Cloak inner shadow */
+      const cloakInner = document.createElementNS(ns, "path");
+      cloakInner.setAttribute("d","M55,55 C66,55 86,65 90,90 L98,130 L12,130 L20,90 C24,65 44,55 55,55 Z");
+      cloakInner.setAttribute("fill","rgba(120,0,200,0.22)"); svg.appendChild(cloakInner);
+
+      /* Left horn */
+      const hornL = document.createElementNS(ns, "polygon");
+      hornL.setAttribute("points","30,48 18,8 38,40"); hornL.setAttribute("fill","#4a0080"); svg.appendChild(hornL);
+      const hornLI = document.createElementNS(ns, "polygon");
+      hornLI.setAttribute("points","30,48 22,16 36,42"); hornLI.setAttribute("fill","#6b00b0"); svg.appendChild(hornLI);
+
+      /* Right horn */
+      const hornR = document.createElementNS(ns, "polygon");
+      hornR.setAttribute("points","80,48 92,8 72,40"); hornR.setAttribute("fill","#4a0080"); svg.appendChild(hornR);
+      const hornRI = document.createElementNS(ns, "polygon");
+      hornRI.setAttribute("points","80,48 88,16 74,42"); hornRI.setAttribute("fill","#6b00b0"); svg.appendChild(hornRI);
+
+      /* Head */
+      const head = document.createElementNS(ns, "ellipse");
+      head.setAttribute("cx","55"); head.setAttribute("cy","50");
+      head.setAttribute("rx","30"); head.setAttribute("ry","28");
+      head.setAttribute("fill","#200040"); svg.appendChild(head);
+
+      /* Face highlight */
+      const face = document.createElementNS(ns, "ellipse");
+      face.setAttribute("cx","55"); face.setAttribute("cy","50");
+      face.setAttribute("rx","24"); face.setAttribute("ry","22");
+      face.setAttribute("fill","#2e0058"); svg.appendChild(face);
+
+      /* Glowing eyes */
+      [["39","47"],["71","47"]].forEach(([cx,cy]) => {
+        /* Eye glow halo */
+        const halo = document.createElementNS(ns, "circle");
+        halo.setAttribute("cx",cx); halo.setAttribute("cy",cy);
+        halo.setAttribute("r","10"); halo.setAttribute("fill","rgba(255,30,0,0.25)");
+        svg.appendChild(halo);
+        /* Eye core */
+        const eye = document.createElementNS(ns, "circle");
+        eye.setAttribute("cx",cx); eye.setAttribute("cy",cy);
+        eye.setAttribute("r","7"); eye.setAttribute("fill","#ff1a00");
+        eye.setAttribute("filter","url(#eye-glow)");
+        eye.setAttribute("class","demon-eye");
+        svg.appendChild(eye);
+        /* Pupil slit */
+        const slit = document.createElementNS(ns, "ellipse");
+        slit.setAttribute("cx",cx); slit.setAttribute("cy",cy);
+        slit.setAttribute("rx","2"); slit.setAttribute("ry","5");
+        slit.setAttribute("fill","#1a0000");
+        svg.appendChild(slit);
+      });
+
+      /* Mouth / fangs */
+      const mouth = document.createElementNS(ns, "path");
+      mouth.setAttribute("d","M41 64 Q55 72 69 64");
+      mouth.setAttribute("fill","none"); mouth.setAttribute("stroke","#ff4400");
+      mouth.setAttribute("stroke-width","2"); mouth.setAttribute("stroke-linecap","round");
+      svg.appendChild(mouth);
+
+      /* Left fang */
+      const fangL = document.createElementNS(ns, "polygon");
+      fangL.setAttribute("points","46,64 44,73 50,64"); fangL.setAttribute("fill","#ffe0d0"); svg.appendChild(fangL);
+      /* Right fang */
+      const fangR = document.createElementNS(ns, "polygon");
+      fangR.setAttribute("points","64,64 62,73 68,64"); fangR.setAttribute("fill","#ffe0d0"); svg.appendChild(fangR);
+
+      return svg;
+    }
+
+    /* Called by pitch-btn click listeners */
+    function onPitchTap(pitch) {
+      playHuntersNote(PITCH_FREQS[pitch]); /* let child compare each sound */
+      if (pitch === huntersState.currentPitch) pitchCorrect(pitch);
+      else                                     pitchWrong(pitch);
+    }
+
+    const PITCH_NAMES = { low: "LOW 🔉", mid: "MEDIUM 🔊", high: "HIGH 📢" };
+
+    function pitchCorrect(pitch) {
+      const earned = starsForWord(huntersState.mistakes);
+      huntersState.totalStars += earned;
+      huntersState.pitchCorrect++;
+
+      const btn = document.querySelector(`.pitch-btn[data-pitch="${pitch}"]`);
+      if (btn) btn.classList.add("pitch-correct");
+      document.querySelectorAll(".pitch-btn").forEach(b => { b.disabled = true; });
+
+      const $label = document.getElementById("hunters-pitch-label");
+      if ($label) $label.textContent = `✨ That was ${PITCH_NAMES[pitch]}! Demon banished!`;
+
+      const demon = document.querySelector(".demon-creature");
+      if (demon) demon.classList.add("demon-defeated");
+
+      ["hunter-yuna","hunter-juno"].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.classList.add("singing");
+        setTimeout(() => el.classList.remove("singing"), 700);
+      });
+
+      playCorrect();
+      launchMiniConfetti();
+      showWordOverlay(earned, () => {
+        huntersState.pitchIndex++;
+        updateHuntersHUD();
+        spawnDemon();
+      });
+    }
+
+    function pitchWrong(pitch) {
+      huntersState.mistakes++;
+      playWrong();
+      const btn = document.querySelector(`.pitch-btn[data-pitch="${pitch}"]`);
+      if (btn) {
+        btn.classList.add("shake");
+        btn.addEventListener("animationend", () => btn.classList.remove("shake"), { once: true });
+      }
+
+      /* Demon surges forward */
+      const demon = document.querySelector(".demon-creature");
+      if (demon) {
+        demon.classList.add("demon-surge");
+        demon.addEventListener("animationend", () => demon.classList.remove("demon-surge"), { once: true });
+      }
+
+      /* Re-play the correct note after a moment so child can keep comparing */
+      const $label = document.getElementById("hunters-pitch-label");
+      if ($label) $label.textContent = "Try again! Listen again...";
+      setTimeout(() => {
+        if (huntersState.active) {
+          playHuntersNote(PITCH_FREQS[huntersState.currentPitch]);
+          if ($label) $label.textContent = "🎵 Which sound was that?";
+        }
+      }, 600);
+    }
+
+    function endPitchBattle() { endHuntersSession(); }
+
+    /* ── RHYTHM RUSH ──────────────────────────────────────────── */
+
+    function startRhythmRush(pitches, fallMs, gapMs) {
+      showHuntersMode("rhythm");
+      huntersState.pitches    = [...pitches];
+      huntersState.totalNotes = pitches.length;
+      huntersState.noteIndex  = 0;
+      huntersState.fallMs     = fallMs;
+      huntersState._gapMs     = gapMs;
+      huntersState.inTapZone  = false;
+      huntersState.rafId      = null;
+      huntersState.noteEl     = null;
+      huntersState.startTime  = null;
+      updateHuntersHUD();
+      setTimeout(spawnRhythmNote, 900);
+    }
+
+    function spawnRhythmNote() {
+      if (!huntersState.active) return;
+      if (huntersState.noteIndex >= huntersState.totalNotes) { endRhythmRush(); return; }
+
+      const $lane = document.getElementById("hunters-lane");
+      const color = HUNTERS_NOTE_COLORS[huntersState.noteIndex % HUNTERS_NOTE_COLORS.length];
+      const note  = document.createElement("div");
+      note.className  = "hunter-note";
+      note.style.cssText =
+        `background:${color};box-shadow:0 0 22px ${color},0 0 44px ${color}55;` +
+        `left:calc(50% - 35px);top:-70px;`;
+      note.textContent = "🎵";
+      note.setAttribute("aria-hidden","true");
+      $lane.appendChild(note);
+
+      huntersState.noteEl    = note;
+      huntersState.inTapZone = false;
+      huntersState.startTime = null;
+      document.getElementById("hunters-tap-zone").classList.remove("zone-active");
+      document.getElementById("hunters-tap-btn").classList.remove("tap-active");
+      huntersState.rafId = requestAnimationFrame(tickRhythmNote);
+    }
+
+    function tickRhythmNote(ts) {
+      if (!huntersState.startTime) huntersState.startTime = ts;
+      const progress = Math.min((ts - huntersState.startTime) / huntersState.fallMs, 1);
+      const $lane = document.getElementById("hunters-lane");
+      const laneH = $lane.clientHeight;
+      const NOTE_D = 70, ZONE_H = 110;
+      const top = progress * (laneH - NOTE_D);
+      if (huntersState.noteEl) huntersState.noteEl.style.top = top + "px";
+      const prevZone         = huntersState.inTapZone;
+      huntersState.inTapZone = (top + NOTE_D >= laneH - ZONE_H);
+      if (huntersState.inTapZone && !prevZone) {
+        document.getElementById("hunters-tap-zone").classList.add("zone-active");
+        document.getElementById("hunters-tap-btn").classList.add("tap-active");
+      }
+      if (progress >= 1) { rhythmNoteMissed(); return; }
+      huntersState.rafId = requestAnimationFrame(tickRhythmNote);
+    }
+
+    /* Called by tap-button pointerdown listener */
+    function onHuntersTap() {
+      if (!huntersState.inTapZone || !huntersState.rafId) return;
+      rhythmNoteCaught();
+    }
+
+    function rhythmNoteCaught() {
+      cancelAnimationFrame(huntersState.rafId);
+      huntersState.rafId = null;
+      playHuntersNote(huntersState.pitches[huntersState.noteIndex]);
+      huntersState.caught++;
+      if (huntersState.noteEl) {
+        huntersState.noteEl.classList.add("note-caught");
+        huntersState.noteEl.addEventListener("animationend",
+          () => { huntersState.noteEl?.remove(); huntersState.noteEl = null; }, { once: true });
+      }
+      ["hunter-yuna","hunter-juno"].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.classList.add("singing");
+        setTimeout(() => el.classList.remove("singing"), 700);
+      });
+      launchMiniConfetti();
+      clearRhythmZone();
+      huntersState.noteIndex++;
+      updateHuntersHUD();
+      setTimeout(spawnRhythmNote, huntersState._gapMs);
+    }
+
+    function rhythmNoteMissed() {
+      huntersState.rafId = null;
+      huntersState.missed++;
+      playWrong();
+      if (huntersState.noteEl) {
+        huntersState.noteEl.classList.add("note-missed");
+        huntersState.noteEl.addEventListener("animationend",
+          () => { huntersState.noteEl?.remove(); huntersState.noteEl = null; }, { once: true });
+      }
+      showShadowCreature();
+      clearRhythmZone();
+      huntersState.noteIndex++;
+      updateHuntersHUD();
+      setTimeout(spawnRhythmNote, huntersState._gapMs + 300);
+    }
+
+    function clearRhythmZone() {
+      document.getElementById("hunters-tap-zone").classList.remove("zone-active");
+      document.getElementById("hunters-tap-btn").classList.remove("tap-active");
+      huntersState.inTapZone = false;
+    }
+
+    function endRhythmRush() {
+      if (huntersState.level === "hard") {
+        /* Transition to boss pitch battle with a toast announcement */
+        huntersState.hardPhase = "boss";
+        showToast("🔥 Boss Battle!");
+        setTimeout(() => { if (huntersState.active) startPitchBattle(PITCH_BOSS); }, 1400);
+      } else {
+        endHuntersSession();
+      }
+    }
+
+    /* ── Shared helpers ───────────────────────────────────────── */
+
+    function showShadowCreature() {
+      const $s = document.getElementById("hunters-shadows");
+      if (!$s) return;
+      const el = document.createElement("div");
+      el.className = "shadow-creature";
+      el.style.left = (Math.random() * 72) + "%";
+      $s.appendChild(el);
+      el.addEventListener("animationend", () => el.remove(), { once: true });
+    }
+
+    function endHuntersSession() {
+      huntersState.active = false;
+      activeGame = { name: "hunters", level: huntersState.level };
+      playHuntersFanfare();
+      launchConfetti();
+      let score, maxScore;
+      if (huntersState.level === "easy") {
+        score = huntersState.totalStars; maxScore = PITCH_EASY.length * 3;
+      } else if (huntersState.level === "medium") {
+        score = huntersState.caught; maxScore = RHYTHM_SONGS.medium.length;
+      } else {
+        score    = huntersState.caught + huntersState.totalStars;
+        maxScore = RHYTHM_SONGS.hard.length + PITCH_BOSS.length * 3;
+      }
+      showEndScreen(score, maxScore);
+    }
+
+    function launchMiniConfetti() {
+      const colors = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#f98d4b','#c084fc'];
+      for (let i = 0; i < 18; i++) {
+        const p = document.createElement("div");
+        p.className = "confetti-piece";
+        p.style.left = (25 + Math.random() * 50) + "%";
+        p.style.backgroundColor = colors[i % colors.length];
+        p.style.borderRadius = "50%";
+        const s = Math.random() * 7 + 6;
+        p.style.width = s + "px"; p.style.height = s + "px";
+        p.style.setProperty("--drift", (Math.random() * 80 - 40) + "px");
+        p.style.animationDuration = (Math.random() * 0.7 + 0.9) + "s";
+        p.style.animationDelay   = (Math.random() * 0.15) + "s";
+        document.body.appendChild(p);
+        p.addEventListener("animationend", () => p.remove(), { once: true });
+      }
+    }
+
+    function playHuntersNote(freq) {
+      withAudio(ctx => {
+        makeNote(ctx, "sine",     freq,     0.32, ctx.currentTime,        0.5);
+        makeNote(ctx, "triangle", freq * 2, 0.10, ctx.currentTime + 0.04, 0.3);
+      });
+    }
+
+    function playHuntersFanfare() {
+      withAudio(ctx => {
+        const t = ctx.currentTime;
+        [[523,0],[659,0.18],[784,0.36],[1047,0.54],[1319,0.72]].forEach(([f,dt]) => {
+          makeNote(ctx, "sine", f, 0.28, t + dt, 0.4);
+        });
+      });
+    }
+
+
+    /* ==========================================================
+       ╔══════════════════════════════════════════════════════════╗
+       ║  SECTION M.5 — COLOURS GAME                             ║
+       ╚══════════════════════════════════════════════════════════╝
+       Tap the coloured circle that matches the displayed name.
+       ========================================================== */
+
+    const COLOURS_BY_LEVEL = {
+      easy:   [
+        { name: "RED",    hex: "#ef4444" },
+        { name: "BLUE",   hex: "#3b82f6" },
+        { name: "GREEN",  hex: "#22c55e" },
+        { name: "YELLOW", hex: "#eab308" },
+      ],
+      medium: [
+        { name: "RED",    hex: "#ef4444" },
+        { name: "BLUE",   hex: "#3b82f6" },
+        { name: "GREEN",  hex: "#22c55e" },
+        { name: "YELLOW", hex: "#eab308" },
+        { name: "PURPLE", hex: "#a855f7" },
+        { name: "ORANGE", hex: "#f97316" },
+      ],
+      hard: [
+        { name: "RED",    hex: "#ef4444" },
+        { name: "BLUE",   hex: "#3b82f6" },
+        { name: "GREEN",  hex: "#22c55e" },
+        { name: "YELLOW", hex: "#eab308" },
+        { name: "PURPLE", hex: "#a855f7" },
+        { name: "ORANGE", hex: "#f97316" },
+        { name: "PINK",   hex: "#ec4899" },
+        { name: "WHITE",  hex: "#f1f5f9" },
+      ],
+    };
+    const COLOURS_ROUNDS = 7;
+
+    const coloursState = {
+      level: null, active: false, round: 0, stars: 0, mistakes: 0,
+      targetColour: null,
+    };
+
+    function showColoursStart() { showScreen("screen-colours-start"); }
+
+    function startColoursGame(level) {
+      activeGame = { name: "colours", level };
+      coloursState.level    = level;
+      coloursState.active   = true;
+      coloursState.round    = 0;
+      coloursState.stars    = 0;
+      coloursState.mistakes = 0;
+      showScreen("screen-colours-game");
+      spawnColourRound();
+    }
+
+    function spawnColourRound() {
+      if (!coloursState.active) return;
+      if (coloursState.round >= COLOURS_ROUNDS) { endColoursGame(); return; }
+
+      const pool   = COLOURS_BY_LEVEL[coloursState.level];
+      const target = pool[Math.floor(Math.random() * pool.length)];
+      coloursState.targetColour = target;
+      coloursState.mistakes     = 0;
+
+      /* Build choices: all colours in the pool (shuffled) */
+      const choices = shuffle([...pool]);
+
+      document.getElementById("colours-score").textContent    = `⭐ ${coloursState.stars}`;
+      document.getElementById("colours-progress").textContent = `${coloursState.round + 1} of ${COLOURS_ROUNDS}`;
+
+      const $name = document.getElementById("colours-name");
+      $name.textContent  = target.name;
+      $name.style.color  = target.hex;
+      $name.style.textShadow = `0 0 30px ${target.hex}, 0 4px 12px rgba(0,0,0,0.4)`;
+
+      const $grid = document.getElementById("colours-grid");
+      $grid.innerHTML = "";
+      choices.forEach(colour => {
+        const btn = document.createElement("button");
+        btn.className = "colour-swatch";
+        btn.style.background = colour.hex;
+        btn.setAttribute("aria-label", colour.name);
+        btn.addEventListener("click", () => { unlockAudio(); onColourTap(colour, btn); });
+        $grid.appendChild(btn);
+      });
+
+      setTimeout(() => { if (coloursState.active) speak(target.name); }, 350);
+    }
+
+    function onColourTap(colour, btn) {
+      if (!coloursState.active) return;
+      if (colour.name === coloursState.targetColour.name) {
+        colourCorrect(btn);
+      } else {
+        colourWrong(btn);
+      }
+    }
+
+    function colourCorrect(btn) {
+      const earned = starsForWord(coloursState.mistakes);
+      coloursState.stars += earned;
+      btn.classList.add("swatch-correct");
+      document.querySelectorAll(".colour-swatch").forEach(b => { b.style.pointerEvents = "none"; });
+      playCorrect();
+      launchMiniConfetti();
+      showWordOverlay(earned, () => {
+        coloursState.round++;
+        spawnColourRound();
+      });
+    }
+
+    function colourWrong(btn) {
+      coloursState.mistakes++;
+      playWrong();
+      btn.classList.add("shake");
+      btn.addEventListener("animationend", () => btn.classList.remove("shake"), { once: true });
+      setTimeout(() => { if (coloursState.active) speak(coloursState.targetColour.name); }, 450);
+    }
+
+    function endColoursGame() {
+      coloursState.active = false;
+      activeGame = { name: "colours", level: coloursState.level };
+      launchConfetti();
+      showEndScreen(coloursState.stars, COLOURS_ROUNDS * 3);
+    }
+
+
+    /* ==========================================================
+       ╔══════════════════════════════════════════════════════════╗
+       ║  SECTION O — MEMORY MATCH GAME                          ║
+       ╚══════════════════════════════════════════════════════════╝
+       Flip emoji cards to find matching pairs.
+       ========================================================== */
+
+    /* Config */
+    const MEMORY_EMOJIS = {
+      easy:   ["🐱","🐶","🐰"],
+      medium: ["🐱","🐶","🐰","🦊","🐸","🦋"],
+      hard:   ["🐱","🐶","🐰","🦊","🐸","🦋","🌸","⭐"],
+    };
+
+    /* Session state */
+    const memoryState = {
+      level: null, active: false, locked: false,
+      cards: [],          /* [{emoji, matched, el}] — indexed same as DOM */
+      flipped: [],        /* up to 2 card indices currently face-up */
+      pairsFound: 0, totalPairs: 0,
+      pairMistakes: 0,    /* mismatches for the current pair attempt */
+      totalStars: 0,
+    };
+
+    function showMemoryStart() { showScreen("screen-memory-start"); }
+
+    function startMemoryGame(level) {
+      activeGame = { name: "memory", level };
+      const s = memoryState;
+      s.level = level; s.active = true; s.locked = false;
+      s.flipped = []; s.pairsFound = 0;
+      s.pairMistakes = 0; s.totalStars = 0;
+
+      const emojis = MEMORY_EMOJIS[level];
+      s.totalPairs = emojis.length;
+      /* Duplicate emojis to form pairs, shuffle the deck */
+      s.cards = shuffle([...emojis, ...emojis].map((emoji, i) => ({
+        id: i, emoji, matched: false, el: null
+      })));
+
+      showScreen("screen-memory-game");
+      buildMemoryGrid();
+      updateMemoryHUD();
+    }
+
+    function buildMemoryGrid() {
+      const s = memoryState;
+      const $grid = document.getElementById("memory-grid");
+      $grid.className = `memory-grid grid-${s.level}`;
+      $grid.innerHTML = "";
+
+      s.cards.forEach((card, idx) => {
+        const outer = document.createElement("div");
+        outer.className = "memory-card";
+        outer.setAttribute("aria-label", "Hidden card — tap to flip");
+
+        const inner = document.createElement("div");
+        inner.className = "memory-card-inner";
+
+        const back = document.createElement("div");
+        back.className = "memory-card-back";
+        back.textContent = "✨";
+
+        const front = document.createElement("div");
+        front.className = "memory-card-front";
+        front.textContent = card.emoji;
+
+        inner.appendChild(back);
+        inner.appendChild(front);
+        outer.appendChild(inner);
+        outer.addEventListener("click", () => onMemoryCardClick(idx, outer));
+        $grid.appendChild(outer);
+        card.el = outer;
+      });
+    }
+
+    function onMemoryCardClick(idx, el) {
+      const s = memoryState;
+      if (!s.active || s.locked) return;
+      if (s.flipped.includes(idx) || s.cards[idx].matched) return;
+
+      el.classList.add("flipped");
+      el.setAttribute("aria-label", s.cards[idx].emoji);
+      s.flipped.push(idx);
+
+      if (s.flipped.length === 2) {
+        s.locked = true;
+        checkMemoryMatch();
+      }
+    }
+
+    function checkMemoryMatch() {
+      const s = memoryState;
+      const [a, b] = s.flipped;
+
+      if (s.cards[a].emoji === s.cards[b].emoji) {
+        /* Match — award stars based on mistakes for this pair */
+        setTimeout(() => {
+          s.cards[a].matched = s.cards[b].matched = true;
+          s.cards[a].el.classList.add("matched");
+          s.cards[b].el.classList.add("matched");
+          s.cards[a].el.setAttribute("aria-label", s.cards[a].emoji + " matched");
+          s.cards[b].el.setAttribute("aria-label", s.cards[b].emoji + " matched");
+
+          const earned = starsForWord(s.pairMistakes);
+          s.totalStars   += earned;
+          s.pairMistakes  = 0;
+          s.pairsFound++;
+          s.flipped = [];
+          s.locked  = false;
+
+          playCorrect();
+          launchMiniConfetti();
+          updateMemoryHUD();
+
+          if (s.pairsFound >= s.totalPairs) setTimeout(endMemoryGame, 700);
+        }, 260);
+      } else {
+        /* No match — show wrong briefly, then flip back */
+        s.pairMistakes++;
+        setTimeout(() => {
+          [a, b].forEach(i => {
+            const el = s.cards[i].el;
+            el.classList.add("card-wrong");
+            el.addEventListener("animationend", () => el.classList.remove("card-wrong"), { once: true });
+          });
+          playWrong();
+        }, 300);
+        setTimeout(() => {
+          s.cards[a].el.classList.remove("flipped");
+          s.cards[b].el.classList.remove("flipped");
+          s.cards[a].el.setAttribute("aria-label", "Hidden card — tap to flip");
+          s.cards[b].el.setAttribute("aria-label", "Hidden card — tap to flip");
+          s.flipped = [];
+          s.locked  = false;
+        }, 1100);
+      }
+    }
+
+    function updateMemoryHUD() {
+      const s = memoryState;
+      document.getElementById("memory-score").textContent    = `⭐ ${s.totalStars}`;
+      document.getElementById("memory-progress").textContent = `${s.pairsFound} / ${s.totalPairs} pairs`;
+    }
+
+    function endMemoryGame() {
+      const s = memoryState;
+      s.active = false;
+      activeGame = { name: "memory", level: s.level };
+      launchConfetti();
+      showEndScreen(s.totalStars, s.totalPairs * 3);
+    }
+
+
+    /* ==========================================================
+       ╔══════════════════════════════════════════════════════════╗
+       ║  SECTION M — AUDIO (Web Audio API)                      ║
+       ║  Tones generated mathematically — no audio files needed. ║
+       ╚══════════════════════════════════════════════════════════╝
        ========================================================== */
 
     let audioCtx = null;
 
+    /* Create the AudioContext lazily on first use (browser policy). */
     function getAudioContext() {
       if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1155,11 +3947,11 @@
       return audioCtx;
     }
 
-    // ── iOS / Android audio unlock ──────────────────────────────
-    // Root cause of no sound on iPhone: AudioContext.resume() is *asynchronous*
-    // — it returns a Promise. The old code called resume() then immediately tried
-    // to play a buffer, but the context was still "suspended" at that moment.
-    // Fix: only play the silent buffer *after* the Promise resolves via .then().
+    /*
+      iOS: AudioContext.resume() is async — it returns a Promise.
+      We must wait for it to resolve before playing any sound.
+      .then(callback) runs the callback once the Promise succeeds.
+    */
     function unlockAudio() {
       const ctx = getAudioContext();
       const playUnlockBuffer = () => {
@@ -1174,26 +3966,21 @@
       if (ctx.state === "running") {
         playUnlockBuffer();
       } else {
-        // .then() runs as a microtask — still within the user-gesture window on iOS 13+
         ctx.resume().then(playUnlockBuffer).catch(() => {});
       }
     }
 
-    // Run fn(ctx) only once the AudioContext is confirmed "running".
-    // If it's suspended (backgrounded tab, or slow iOS resume), we wait.
-    // This is the key fix: makeNote() is never called on a suspended context.
+    /* Run fn(ctx) only when the AudioContext is confirmed running */
     function withAudio(fn) {
       const ctx = getAudioContext();
       if (ctx.state === "running") {
         try { fn(ctx); } catch (e) {}
       } else {
-        ctx.resume()
-          .then(() => { try { fn(ctx); } catch (e) {} })
-          .catch(() => {});
+        ctx.resume().then(() => { try { fn(ctx); } catch (e) {} }).catch(() => {});
       }
     }
 
-    // Build and immediately play one short tone.
+    /* Play a single synthesised tone */
     function makeNote(ctx, type, freq, volume, startTime, duration) {
       const osc  = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -1207,7 +3994,7 @@
       osc.stop(startTime + duration);
     }
 
-    // Two-note rising chime (C5 → E5) — correct letter drop
+    /* Two-note rising chime (C5 → E5) — correct drop */
     function playCorrect() {
       withAudio(ctx => {
         makeNote(ctx, "sine", 523, 0.28, ctx.currentTime,        0.22);
@@ -1215,7 +4002,7 @@
       });
     }
 
-    // Descending sawtooth buzz — wrong letter drop
+    /* Descending sawtooth buzz — wrong drop */
     function playWrong() {
       withAudio(ctx => {
         const osc  = ctx.createOscillator();
@@ -1232,7 +4019,7 @@
       });
     }
 
-    // Ascending C-major arpeggio (C5 E5 G5 C6) — word complete
+    /* Ascending C-major arpeggio (C5 E5 G5 C6) — round complete */
     function playWordComplete() {
       withAudio(ctx => {
         [[523, 0.00], [659, 0.13], [784, 0.26], [1047, 0.39]].forEach(([freq, t]) => {
@@ -1241,156 +4028,244 @@
       });
     }
 
+
     /* ==========================================================
-       SPEECH — Web Speech API
-       ──────────────────────────────────────────────────────────
-       iOS requires speechSynthesis.speak() to be called inside a
-       user gesture (tap/click). The 🔊 button is the reliable
-       trigger. unlockSpeech() fires a silent utterance on the
-       first level-button tap so iOS "grants" speech permission,
-       then subsequent calls from the button always work.
+       ╔══════════════════════════════════════════════════════════╗
+       ║  SECTION N — SPEECH (Web Speech API)                     ║
+       ╚══════════════════════════════════════════════════════════╝
        ========================================================== */
+
     let selectedVoice = null;
 
     function initVoices() {
       if (!window.speechSynthesis) return;
       const voices = window.speechSynthesis.getVoices();
-      // Prefer local, natural-sounding English voices in priority order
       selectedVoice =
-        voices.find(v => v.name === 'Samantha') ||                         // iOS/macOS
-        voices.find(v => v.name === 'Google US English') ||                // Chrome desktop
-        voices.find(v => v.name === 'Karen') ||                            // macOS AU
-        voices.find(v => v.lang === 'en-US' && v.localService) ||          // any local en-US
-        voices.find(v => v.lang === 'en-GB' && v.localService) ||          // local en-GB
-        voices.find(v => v.lang.startsWith('en') && v.localService) ||     // any local English
-        voices.find(v => v.lang.startsWith('en')) ||                       // any English
+        voices.find(v => v.name === 'Samantha') ||
+        voices.find(v => v.name === 'Google US English') ||
+        voices.find(v => v.name === 'Karen') ||
+        voices.find(v => v.lang === 'en-US' && v.localService) ||
+        voices.find(v => v.lang === 'en-GB' && v.localService) ||
+        voices.find(v => v.lang.startsWith('en') && v.localService) ||
+        voices.find(v => v.lang.startsWith('en')) ||
         null;
     }
 
+    /* Fire a silent utterance so iOS grants speech permission for this session */
     function unlockSpeech() {
       if (!window.speechSynthesis) return;
-      // Speak an empty utterance in the gesture handler so iOS grants
-      // speech permission for this session.
-      const u = new SpeechSynthesisUtterance('​'); // zero-width space
+      const u = new SpeechSynthesisUtterance('​'); /* zero-width space */
       u.volume = 0;
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(u);
     }
 
-    function speak(word) {
+    function speak(text) {
       if (!window.speechSynthesis) return;
       window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(word);
-      utterance.lang  = 'en-US';
-      utterance.rate  = 0.78;   // slow and clear for young children
-      utterance.pitch = 1.05;
-      utterance.volume = 1.0;
-      if (selectedVoice) utterance.voice = selectedVoice;
-      window.speechSynthesis.speak(utterance);
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang   = 'en-US';
+      u.rate   = 0.78;   /* slow and clear for young children */
+      u.pitch  = 1.05;
+      u.volume = 1.0;
+      if (selectedVoice) u.voice = selectedVoice;
+      window.speechSynthesis.speak(u);
     }
 
-    /* ==========================================================
-       CONFETTI
-       ──────────────────────────────────────────────────────────
-       Creates 55 small coloured divs, appends them to <body>, and
-       lets a CSS animation drop them down the screen with a
-       horizontal wobble (controlled by the --drift CSS variable).
-       Each piece removes itself when its animation ends.
-       ========================================================== */
-    function launchConfetti() {
-      const colors = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#f98d4b','#c084fc','#ffffff'];
-      const shapes = ['2px', '4px', '50%'];  // rectangle, rounded square, circle
-
-      for (let i = 0; i < 55; i++) {
-        const piece = document.createElement("div");
-        piece.className = "confetti-piece";
-
-        piece.style.left            = (Math.random() * 100) + "%";
-        piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-        piece.style.borderRadius    = shapes[Math.floor(Math.random() * shapes.length)];
-
-        const size = Math.random() * 8 + 8;   // 8–16 px
-        piece.style.width  = size + "px";
-        piece.style.height = (size * (Math.random() * 0.8 + 0.6)) + "px";
-
-        // --drift sets the horizontal wobble mid-fall (see @keyframes confetti-fall)
-        piece.style.setProperty("--drift", (Math.random() * 120 - 60) + "px");
-        // These inline longhands override the class's `animation` shorthand values
-        piece.style.animationDuration = (Math.random() * 1.5 + 1.8) + "s";
-        piece.style.animationDelay   = (Math.random() * 0.5) + "s";
-
-        document.body.appendChild(piece);
-        piece.addEventListener("animationend", () => piece.remove(), { once: true });
-      }
-    }
 
     /* ==========================================================
-       EVENT LISTENERS
-       ──────────────────────────────────────────────────────────
-       Attach these once here, not inside repeated render functions,
-       so the same button never accidentally gains two listeners.
-
-       addEventListener(eventName, callback) is JS's way of saying
-       "run this function when this event happens on this element".
-       Arrow function syntax:  () => { … }  is like a lambda with
-       a block body in Python.
+       ╔══════════════════════════════════════════════════════════╗
+       ║  SECTION O — EVENT LISTENERS                             ║
+       ╚══════════════════════════════════════════════════════════╝
        ========================================================== */
 
-    // Level-select buttons
-    document.querySelectorAll(".level-btn").forEach(btn => {
+    /* ── Home screen game cards ──────────────────────────────── */
+    document.querySelectorAll(".game-card").forEach(card => {
+      card.addEventListener("click", () => {
+        unlockAudio();
+        unlockSpeech();
+        const game = card.dataset.game;
+        if      (game === "spelling") showSpellingStart();
+        else if (game === "math")     showMathStart();
+        else if (game === "reading")  showReadingStart();
+        else if (game === "hunters")  showHuntersStart();
+        else if (game === "colours")  showColoursStart();
+        else if (game === "memory")   showMemoryStart();
+      });
+    });
+
+    /* ── Spelling level select ───────────────────────────────── */
+    document.getElementById("spelling-home-btn").addEventListener("click", showHome);
+
+    /*
+      data-level guard: prevents these handlers from firing on
+      end-screen buttons that share the .level-btn visual class.
+    */
+    document.querySelectorAll("[data-level]").forEach(btn => {
       btn.addEventListener("click", () => {
-        unlockAudio();    // must happen inside the tap handler, before any sound plays
-        unlockSpeech();   // fire a silent utterance so iOS grants speech permission
+        unlockAudio();
+        unlockSpeech();
         startGame(btn.dataset.level);
       });
     });
 
-    // 🔊 button — always within a user gesture, so iOS speech works reliably
+    /* ── Spelling game screen ────────────────────────────────── */
     document.getElementById("speak-btn").addEventListener("click", () => {
       if (state.currentWord) speak(state.currentWord.word);
     });
 
-    // Back button in game header
-    $backBtn.addEventListener("click", () => {
-      showStartScreen();
+    $backBtn.addEventListener("click", showSpellingStart);
+
+    /* ── Math level select ───────────────────────────────────── */
+    document.getElementById("math-home-btn").addEventListener("click", showHome);
+
+    document.querySelectorAll("[data-math-level]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        unlockAudio();
+        unlockSpeech();
+        startMathGame(btn.dataset.mathLevel);
+      });
     });
 
-    // End screen: replay the same level
+    /* ── Math game screen ────────────────────────────────────── */
+    document.getElementById("math-speak-btn").addEventListener("click", () => {
+      if (mathState.currentProblem) speakMath(mathState.currentProblem);
+    });
+
+    document.getElementById("math-back-btn").addEventListener("click", showMathStart);
+
+    /* ── Reading level select ────────────────────────────────── */
+    document.getElementById("reading-home-btn").addEventListener("click", showHome);
+
+    document.querySelectorAll("[data-reading-level]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        unlockAudio();
+        unlockSpeech();
+        startReadingGame(btn.dataset.readingLevel);
+      });
+    });
+
+    /* ── Reading game screen ─────────────────────────────────── */
+    document.getElementById("reading-speak-story").addEventListener("click", () => {
+      if (readingState.currentStory) speak(readingState.currentStory.text);
+    });
+
+    document.getElementById("reading-speak-question").addEventListener("click", () => {
+      if (readingState.currentStory) speak(readingState.currentStory.question);
+    });
+
+    document.getElementById("reading-back-btn").addEventListener("click", showReadingStart);
+
+    /* ── Singing Hunters level select ───────────────────────── */
+    document.getElementById("hunters-home-btn").addEventListener("click", showHome);
+
+    document.querySelectorAll("[data-hunters-level]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        unlockAudio();
+        unlockSpeech();
+        startHuntersGame(btn.dataset.huntersLevel);
+      });
+    });
+
+    /* ── Singing Hunters game screen ─────────────────────────── */
+
+    /* Back button: cancel any in-flight animation/battle, then return to level select */
+    document.getElementById("hunters-back-btn").addEventListener("click", () => {
+      huntersState.active = false;
+      if (huntersState.rafId) {
+        cancelAnimationFrame(huntersState.rafId);
+        huntersState.rafId = null;
+      }
+      if (huntersState.noteEl) { huntersState.noteEl.remove(); huntersState.noteEl = null; }
+      const $shadows = document.getElementById("hunters-shadows");
+      if ($shadows) $shadows.innerHTML = "";
+      const $arena = document.getElementById("demon-arena");
+      if ($arena) $arena.innerHTML = "";
+      document.getElementById("hunters-tap-zone").classList.remove("zone-active");
+      document.getElementById("hunters-tap-btn").classList.remove("tap-active");
+      document.querySelectorAll(".pitch-btn").forEach(b => b.classList.remove("pitch-correct"));
+      showHuntersStart();
+    });
+
+    /* Pitch buttons — child taps the sound they think the demon made */
+    document.querySelectorAll(".pitch-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        unlockAudio();
+        onPitchTap(btn.dataset.pitch);
+      });
+    });
+
+    /*
+      pointerdown fires immediately on touch with no 300 ms delay.
+      e.preventDefault() stops the browser generating a follow-up
+      click event so onHuntersTap is never called twice per tap.
+    */
+    document.getElementById("hunters-tap-btn").addEventListener("pointerdown", e => {
+      e.preventDefault();
+      onHuntersTap();
+    });
+
+    /* ── Colours game ───────────────────────────────────────── */
+    document.getElementById("colours-home-btn").addEventListener("click", showHome);
+
+    document.querySelectorAll("[data-colours-level]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        unlockAudio();
+        unlockSpeech();
+        startColoursGame(btn.dataset.coloursLevel);
+      });
+    });
+
+    document.getElementById("colours-back-btn").addEventListener("click", () => {
+      coloursState.active = false;
+      showColoursStart();
+    });
+
+    /* ── Memory Match ────────────────────────────────────────── */
+    document.getElementById("memory-home-btn").addEventListener("click", showHome);
+
+    document.querySelectorAll("[data-memory-level]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        unlockAudio();
+        startMemoryGame(btn.dataset.memoryLevel);
+      });
+    });
+
+    document.getElementById("memory-back-btn").addEventListener("click", () => {
+      memoryState.active = false;
+      memoryState.locked = false;
+      showMemoryStart();
+    });
+
+    /* ── Shared end screen ───────────────────────────────────── */
     document.getElementById("play-again-btn").addEventListener("click", () => {
-      unlockAudio();   // re-unlock in case the context was suspended while on the end screen
-      startGame(state.level);
+      unlockAudio();
+      if      (activeGame.name === "math")    startMathGame(activeGame.level);
+      else if (activeGame.name === "reading") startReadingGame(activeGame.level);
+      else if (activeGame.name === "hunters") startHuntersGame(activeGame.level);
+      else if (activeGame.name === "colours") startColoursGame(activeGame.level);
+      else if (activeGame.name === "memory")  startMemoryGame(activeGame.level);
+      else                                    startGame(activeGame.level);
     });
 
-    // End screen: go back to level select
-    document.getElementById("change-level-btn").addEventListener("click", () => {
-      showStartScreen();
-    });
+    document.getElementById("change-level-btn").addEventListener("click", showHome);
+
 
     /* ==========================================================
-       ENTRY POINT
-       ──────────────────────────────────────────────────────────
-       Code at the top level of a <script> runs immediately when
-       the browser reaches it (our script is after all HTML, so
-       the DOM is already built). This is like Python's:
-         if __name__ == "__main__":
-             showStartScreen()
+       ╔══════════════════════════════════════════════════════════╗
+       ║  SECTION P — ENTRY POINT                                 ║
+       ╚══════════════════════════════════════════════════════════╝
        ========================================================== */
-    // Belt-and-suspenders audio unlock: if the level-button click somehow
-    // didn't fully unlock the context (can happen on some older iOS versions),
-    // the very first touch anywhere on the page will try again.
-    // { once: true } means this listener removes itself after firing once.
-    // { passive: true } tells the browser this won't call preventDefault(),
-    // which improves scroll performance.
+
+    /* Belt-and-suspenders audio unlock on first touch (some older iOS) */
     document.addEventListener("touchstart", unlockAudio, { once: true, passive: true });
 
-    // Trigger voice list loading (async on iOS/Chrome). initVoices() picks the
-    // best English voice and stores it in selectedVoice for all speak() calls.
     if (window.speechSynthesis) {
       initVoices();
       window.speechSynthesis.onvoiceschanged = initVoices;
     }
 
-    showStartScreen();
+    showHome();
 
   </script>
 </body>
